@@ -1,29 +1,28 @@
 #pragma once
 
-#include <apgame/core/context.hpp>
+#include <apgame/core/client.hpp>
+#include <apgame/core/client_option.hpp>
 #include <apgame/core/logging.hpp>
 
 #include <apgame/game/gameid.hpp>
-#include <apgame/game/reversi_client.hpp>
 
 namespace apgame {
 
 
 struct game_client {
 
-  game_client (gameid id) noexcept
-  : gameid_{id} {
+  game_client (client_option const & opt)
+  : client_{opt} {
   }
 
-  void operator() (context & ctx) {
-    LOG_DEBUG("start\n");
+protected:
 
+  bool send_gameid_check_status (context & ctx, gameid id) {
     LOG_DEBUG("send gameid...\n");
-    gameid gameid_request;
-    if (!ctx.send(gameid_request)) {
+    if (!ctx.send(id)) {
       LOG_DEBUG("fail\n");
       LOG_DEBUG("stop\n");
-      return;
+      return false;
     }
 
     LOG_DEBUG("recieve response...\n");
@@ -31,26 +30,15 @@ struct game_client {
     if (!ctx.recieve(check) || !check) {
       LOG_DEBUG("fail\n");
       LOG_DEBUG("stop\n");
-      return;
+      return false;
     }
 
-    LOG_DEBUG("ok. gameid = %d.\n", gameid_request);
-    switch (gameid_) {
-    case REVERSI:
-      ctx.send(true);
-      reversi_client().run(ctx); 
-    default:
-      LOG_DEBUG("invalid gameid");
-      ctx.send(false); break;
-    } 
-
-
-    LOG_DEBUG("stop\n");
+    LOG_DEBUG("ok. gameid = %d.\n", id);
+    return true;
   }
 
-private:
-  gameid gameid_;
-
+protected:
+  client client_;
 };
 
 }

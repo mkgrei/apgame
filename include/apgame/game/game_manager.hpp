@@ -29,11 +29,13 @@ struct game_manager {
     switch (gameid_request) {
     case REVERSI:
       ctx.send(true);
-      reversi_player().run(ctx); 
+      reversi_player().run(ctx);
+      break;
     default:
       LOG_DEBUG("invalid gameid");
-      ctx.send(false); break;
-    } 
+      ctx.send(false);
+      break;
+    }
     LOG_DEBUG("stop\n");
   }
 
