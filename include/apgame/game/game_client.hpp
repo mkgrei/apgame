@@ -1,44 +1,53 @@
 #pragma once
 
 #include <apgame/core/client.hpp>
-#include <apgame/core/client_option.hpp>
+#include <apgame/core/context.hpp>
 #include <apgame/core/logging.hpp>
 
-#include <apgame/game/gameid.hpp>
+#include <apgame/game/game_enum.hpp>
 
 namespace apgame {
 
 
 struct game_client {
 
-  game_client (client_option const & opt)
-  : client_{opt} {
+  game_client () {
   }
 
-protected:
+  void init (context & ctx) {
+    ctx_ = &ctx;
+  } 
 
-  bool send_gameid_check_status (context & ctx, gameid id) {
-    LOG_DEBUG("send gameid...\n");
-    if (!ctx.send(id)) {
-      LOG_DEBUG("fail\n");
-      LOG_DEBUG("stop\n");
+  bool call_join_game (game_id id, std::string const & name) {
+    LOG_INFO("join_game game_id = %d, name = %s\n", id, name.data());
+    if (!ctx_->send(GAME_COMMAND_JOIN_GAME)) {
+      LOG_INFO("join_game ... fail\n");
+      return false;
+    }
+    if (!ctx_->send(id)) {
+      LOG_INFO("join_game ... fail\n");
+      return false;
+    }
+    if (!ctx_->send(name)) {
+      LOG_INFO("join_game ... fail\n");
       return false;
     }
 
-    LOG_DEBUG("recieve response...\n");
-    bool check;
-    if (!ctx.recieve(check) || !check) {
-      LOG_DEBUG("fail\n");
-      LOG_DEBUG("stop\n");
+    bool status;
+    if (!ctx_->recieve(status)) {
+      LOG_INFO("join_game ... fail\n");
       return false;
     }
+    if (!status) {
+      LOG_INFO("join_game ... fail\n");
+      return false;
+    }
+    LOG_INFO("join_game ... ok\n");
 
-    LOG_DEBUG("ok. gameid = %d.\n", id);
     return true;
   }
-
 protected:
-  client client_;
+  context * ctx_;
 };
 
 }

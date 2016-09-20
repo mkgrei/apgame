@@ -8,11 +8,11 @@
 
 namespace apgame {
 
-struct game_player {
+struct game_api {
 
-  game_player () noexcept = default;
+  game_api () noexcept = default;
 
-  virtual void run (context & ctx) = 0;
+  virtual void run () = 0;
 
 };
 

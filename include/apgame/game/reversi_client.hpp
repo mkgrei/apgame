@@ -4,124 +4,120 @@
 #include <apgame/core/context.hpp>
 #include <apgame/core/logging.hpp>
 
-#include <apgame/game/gameid.hpp>
+#include <apgame/game/game_enum.hpp>
 #include <apgame/game/game_client.hpp>
-#include <apgame/game/reversi.hpp>
-#include <apgame/game/reversi_player.hpp>
+// #include <apgame/game/reversi.hpp>
+#include <apgame/game/reversi_enum.hpp>
+#include <apgame/game/reversi_api.hpp>
+
+#include <thread>
 
 namespace apgame {
 
 struct reversi_client : public game_client {
 
-  using game_status = reversi::game_status;
-  using request = reversi::request;
+  reversi_client () = default;
 
-  reversi_client (client_option const & opt)
-  : game_client{opt}
-  , token_{0}{
-  }
-
-  void operator() (context & ctx) {
-    ctx_ = &ctx;
-  }
-
-  template <class Handler>
-  void run (Handler && handler) {
-    client_.run([&] (context & ctx) {
-      ctx_ = &ctx;
-      if (!send_gameid_check_status(ctx, gameid::REVERSI)) {
-        LOG_DEBUG("send_gameid_check_status fail.\n");
-        LOG_DEBUG("stop client.\n");
-        return;
-      }
-      init();
-      LOG_DEBUG("start user handler.\n");
-      handler(*this);
-      LOG_DEBUG("stop client.\n");
-    });
-  }
-
-  bool get_game_status (game_status & status) {
-    int s;
-    if (!ctx_->send(request::GET_GAME_STATUS)) {
+  bool call_add_user (unsigned int & token) {
+    LOG_DEBUG("call_add_user ... token = %08x\n", token);
+    if (!ctx_->send(REVERSI_COMMAND_ADD_USER)) {
+      LOG_DEBUG("call_add_user ... fail\n");
       return false;
     }
-    if (!ctx_->recieve(s)) {
+    if (!ctx_->send(token)) {
+      LOG_DEBUG("call_add_user ... fail\n");
       return false;
     }
-    status = game_status(s);
+    if (!ctx_->send(0x12345678u)) {
+      LOG_DEBUG("call_add_user ... fail\n");
+      return false;
+    }
+    if (!ctx_->send(0x12345678u)) {
+      LOG_DEBUG("call_add_user ... fail\n");
+      return false;
+    }
+    if (!ctx_->recieve(token)) {
+      LOG_DEBUG("call_add_user ... fail\n");
+      return false;
+    }
+ 
+    LOG_DEBUG("call_add_user ... ok ... token = %08x\n", token);
     return true;
   }
 
-  void put_stone (int x, int y) {
-
-  }
-
-private:
-  context * ctx_;
-  int token_;
-
-  bool init () {
-    LOG_DEBUG("start init.\n");
-    if (!ctx_->send(request::INIT)) {
+/**
+ *  @details
+ */
+  bool call_make_player (bool & is_black) {
+    LOG_DEBUG("call_make_player ...\n");
+    if (!ctx_->send(REVERSI_COMMAND_MAKE_PLAYER)) {
+      LOG_DEBUG("call_make_player ... fail\n");
       return false;
     }
-
-    bool check;
-    if (!ctx_->recieve(check)) {
-      LOG_DEBUG("fail.\n");
+    if (!ctx_->recieve(is_black)) {
+      LOG_DEBUG("call_make_player ... fail\n");
       return false;
     }
+    LOG_DEBUG("call_make_player ... ok ... is_black = %s\n", is_black ? "true" : "false");
 
-    if (!check) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-
-    LOG_DEBUG("send token = %d.\n", token_);
-    if (!ctx_->send(token_)) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-
-    LOG_DEBUG("recieve token...\n");
-    if (!ctx_->recieve(token_)) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-    LOG_DEBUG("token = %d\n", token_);
-
-    if (token_ == 0) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-
-    if (!auth_token()) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-
-    LOG_DEBUG("end init.\n");
     return true;
   }
 
-  bool auth_token () {
-    LOG_DEBUG("start auth token.\n");
-    if (!ctx_->send(token_)) {
-      LOG_DEBUG("fail.\n");
+/**
+ * @details
+ */
+  bool call_get_game_status (reversi_status & status) {
+    if (!ctx_->send(REVERSI_COMMAND_GET_GAME_STATUS)) {
       return false;
     }
-    bool check;
-    if (!ctx_->recieve(check)) {
-      LOG_DEBUG("fail.\n");
+    if (!ctx_->recieve(status)) {
       return false;
     }
+    return true;
+  }
 
-    if (!check) {
-      LOG_DEBUG("fail.\n");
+/**
+ * @details
+ */
+  bool call_get_board (std::array<reversi_stone, 64> & board) {
+    if (!ctx_->send(REVERSI_COMMAND_GET_BOARD)){
       return false;
     }
-    LOG_DEBUG("success.\n");
+    if (!ctx_->recieve(board)) {
+      return false;
+    }
+    return true;
+  }
+
+/**
+ * @details
+ */
+  bool call_put_stone (int x, int y, bool & success) {
+    if (!ctx_->send(REVERSI_COMMAND_PUT_STONE)){
+      return false;
+    }
+    if (!ctx_->send(x)) {
+      return false;
+    }
+    if (!ctx_->send(y)) {
+      return false;
+    }
+    if (!ctx_->recieve(success)) {
+      return false;
+    }
+    if (!success) {
+      return false;
+    }
+    return true;
+  }
+
+  bool call_command (int cmd) {
+    LOG_DEBUG("command ... %d\n", cmd);
+    if (!ctx_->send(cmd)) {
+      LOG_DEBUG("command ... fail\n");
+      return false;
+    }
+    LOG_DEBUG("command ... ok\n");
     return true;
   }
 };

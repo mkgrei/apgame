@@ -1,151 +1,124 @@
 #pragma once
 
-#include <apgame/game/game_player.hpp>
-
+#include <apgame/core/client.hpp>
+#include <apgame/core/client_option.hpp>
+#include <apgame/game/game_enum.hpp>
 #include <apgame/game/reversi.hpp>
+#include <apgame/game/reversi_enum.hpp>
+#include <apgame/game/reversi_client.hpp>
+
+
 
 namespace apgame {
 
-struct reversi_player : public game_player {
+struct reversi_player {
 
-  using game_status = reversi::game_status;
-  using request = reversi::request;
-
-  reversi_player ()
-  : game_(new reversi) {
-    token_ = 0;
+  reversi_player (client_option const & opt, std::string board_name)
+  : socket_{opt}
+  , board_name_{board_name}
+  , token_{0} {
   }
 
-  reversi_player (std::shared_ptr<reversi> const & game)
-  : game_{game} {
-    if (!game_) {
-      game_.reset(new reversi);
-    }
-  }
+  template <class Handler>
+  void run (Handler && handler) {
+    socket_.run([&] (context & ctx) {
+      gamer_.init(ctx);
 
-  void run (context & ctx) override {
-    while (true) {
-      request req;
-      ctx.recieve(req);
-
-      // if handle_XXX return true, keep loop.
-      // if handle_XXX return false, break loop.
-      switch (req) {
-      case request::INIT:
-        if (!handle_init(ctx)) { return; }
-        break;
-      case request::MAKE_PLAYER:
-        if (!handle_make_player(ctx)) { return; }
-        break;
-      case request::GET_GAME_STATUS:
-        if (!handle_get_game_status(ctx)) { return; }
-        break;
-      default:
-        if (!handle_bad_request(ctx)) { return; }
+      if (!gamer_.call_join_game(GAME_ID_REVERSI, board_name_)) {
+        LOG_ERROR("join_game ... fail\n");
         return;
       }
-    }
+
+      if (!gamer_.call_add_user(token_)) {
+        LOG_ERROR("add_user ... fail\n");
+        return; 
+      }
+      gamer_.call_command(12345);
+      return;
+
+      if (!gamer_.call_make_player(is_black_)) {
+        LOG_ERROR("make_player ... fail\n");
+        return; 
+      }
+
+      while (true) {
+        reversi_status status;
+        if (!gamer_.call_get_game_status(status)) {
+          LOG_ERROR("get_game_status ... fail\n");
+          return;
+        }
+        if (status != REVERSI_STATUS_BEFORE_GAME) {
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
+      }
+
+      while (true) {
+        reversi_status status;
+        if (!gamer_.call_get_game_status(status)) {
+          LOG_ERROR("get_game_status ... fail\n");
+          return;
+        }
+
+        if (status == REVERSI_STATUS_AFTER_GAME) {
+          break;
+        }
+
+        if (is_black() && status != REVERSI_STATUS_BLACK_TURN) {
+          continue;
+        }
+
+        if (is_white () && status != REVERSI_STATUS_WHITE_TURN) {
+          continue;
+        }
+
+        if (!gamer_.call_get_board(board_)) {
+          LOG_ERROR("call_get_board ... fail\n");
+          return;
+        }
+
+        int x, y;
+        handler(is_black(), board(), x, y);
+
+        bool success;
+        if (!gamer_.call_put_stone(x, y, success)) {
+          LOG_ERROR("put_stone ... fail\n");
+          return;
+        }
+        if (!success) {
+          LOG_ERROR("put_stone ... fail\n");
+          return;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(300)); 
+      }
+      LOG_INFO("finished\n");
+
+    });
   }
 
-  game_status get_game_status () const noexcept {
-    return game_->get_game_status();
+  bool is_black () const noexcept {
+    return is_black_;
   }
 
+  bool is_white () const noexcept {
+    return !is_black_;
+  }
+
+  std::array<reversi_stone, 64> const & board () const noexcept {
+    return board_;
+  }
+
+  virtual ~reversi_player () noexcept = default;
 
 private:
-  std::shared_ptr<reversi> game_;
-  int token_;
+  client socket_;
+  reversi_client gamer_;
 
-  bool handle_init (context & ctx) {
-    LOG_DEBUG("start init.\n");
-    if (get_game_status() != game_status::BEFORE_GAME) {
-      ctx.send(false);
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-    ctx.send(true);
+  std::string board_name_;
 
-    LOG_DEBUG("recieve token...\n");
-    int token;
-    if (!ctx.recieve(token)) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-    LOG_DEBUG("token = %d\n", token);
-
-    if (token == 0) {
-      LOG_DEBUG("generate token...\n");
-      if (!game_->generate_token(token)) {
-        LOG_DEBUG("fail.\n");
-        ctx.send(0);
-        return false;
-      }
-      LOG_DEBUG("token = %d\n", token);
-    }
-
-    LOG_DEBUG("send token.\n");
-    if (!ctx.send(token)) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-
-    int token2;
-    if (!auth_token(ctx, token2)) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-    if (token != token2) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-
-    token_ = token;
-
-    return true;
-  }
-
-  bool handle_make_player (context & ctx) {
-    if (!game_->make_player(token_)) {
-      ctx.send(false);
-      return true;
-    }
-    if (get_game_status() != game_status::BEFORE_GAME) {
-      ctx.send(false);
-      return true;
-    }
-    ctx.send(true);
-    return true;
-  }
-
-  bool handle_get_game_status (context & ctx) {
-    int status = game_->get_game_status();
-    if (!ctx.send(status)) {
-      return false;
-    }
-    return true;
-  }
-
-  bool handle_bad_request (context & ctx) {
-    ctx.send(false);
-    ctx.close();
-    return true;
-  }
-
-  bool auth_token (context & ctx, int & token) {
-    LOG_DEBUG("start auth token.\n");
-    if (!ctx.recieve(token)) {
-      LOG_DEBUG("fail.\n");
-      return false;
-    }
-    if (!game_->check_token(token)) {
-      LOG_DEBUG("fail.\n");
-      ctx.send(false);
-      return false;
-    }
-    ctx.send(true);
-    LOG_DEBUG("success.\n");
-    return true;
-  }
+  unsigned int token_;
+  bool is_black_;
+  std::array<reversi_stone, 64> board_;
 };
 
 }
