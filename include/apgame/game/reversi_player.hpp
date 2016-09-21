@@ -7,8 +7,6 @@
 #include <apgame/game/reversi_enum.hpp>
 #include <apgame/game/reversi_client.hpp>
 
-
-
 namespace apgame {
 
 struct reversi_player {
@@ -16,7 +14,7 @@ struct reversi_player {
   reversi_player (client_option const & opt, std::string board_name)
   : socket_{opt}
   , board_name_{board_name}
-  , token_{0} {
+  , token_{0x12345678} {
   }
 
   template <class Handler>
@@ -31,14 +29,12 @@ struct reversi_player {
 
       if (!gamer_.call_add_user(token_)) {
         LOG_ERROR("add_user ... fail\n");
-        return; 
+        return;
       }
-      gamer_.call_command(12345);
-      return;
 
       if (!gamer_.call_make_player(is_black_)) {
         LOG_ERROR("make_player ... fail\n");
-        return; 
+        return;
       }
 
       while (true) {
@@ -50,9 +46,8 @@ struct reversi_player {
         if (status != REVERSI_STATUS_BEFORE_GAME) {
           break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
       }
-
       while (true) {
         reversi_status status;
         if (!gamer_.call_get_game_status(status)) {
@@ -65,10 +60,12 @@ struct reversi_player {
         }
 
         if (is_black() && status != REVERSI_STATUS_BLACK_TURN) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
           continue;
         }
 
         if (is_white () && status != REVERSI_STATUS_WHITE_TURN) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
           continue;
         }
 
@@ -77,6 +74,7 @@ struct reversi_player {
           return;
         }
 
+        print_board();
         int x, y;
         handler(is_black(), board(), x, y);
 
@@ -86,10 +84,9 @@ struct reversi_player {
           return;
         }
         if (!success) {
-          LOG_ERROR("put_stone ... fail\n");
-          return;
+          LOG_ERROR("put_stone ... invalid put\n");
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(300)); 
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
       }
       LOG_INFO("finished\n");
 
@@ -119,6 +116,24 @@ private:
   unsigned int token_;
   bool is_black_;
   std::array<reversi_stone, 64> board_;
+
+  void print_board() {
+    for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        reversi_stone stone = board_[x + 8 * y];
+        if (stone == reversi_stone::EMPTY) {
+          std::cout << '.';
+        }
+        if (stone == reversi_stone::WHITE) {
+          std::cout << 'W';
+        }
+        if (stone == reversi_stone::BLACK) {
+          std::cout << 'B';
+        }
+      }
+      std::cout << std::endl;
+    }
+  }
 };
 
 }

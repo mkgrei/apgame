@@ -6,11 +6,23 @@
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <random>
 
 void myplayer (bool is_black, std::array<apgame::reversi_stone, 64> const & board, int & x, int & y) {
-  x = 0;
-  y = 0;
-  LOG_INFO("myplayer\n");
+  static int X = 0;
+  static int Y = 0;
+
+  ++X;
+  if (X == 8) {
+    ++Y;
+    X = 0;
+  }
+  if (Y == 8) {
+    X = 0;
+    Y = 0;
+  }
+  x = X;
+  y = Y;
 }
 
 int main (int argc, char ** argv) {

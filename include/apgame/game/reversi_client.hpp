@@ -28,19 +28,10 @@ struct reversi_client : public game_client {
       LOG_DEBUG("call_add_user ... fail\n");
       return false;
     }
-    if (!ctx_->send(0x12345678u)) {
-      LOG_DEBUG("call_add_user ... fail\n");
-      return false;
-    }
-    if (!ctx_->send(0x12345678u)) {
-      LOG_DEBUG("call_add_user ... fail\n");
-      return false;
-    }
     if (!ctx_->recieve(token)) {
       LOG_DEBUG("call_add_user ... fail\n");
       return false;
     }
- 
     LOG_DEBUG("call_add_user ... ok ... token = %08x\n", token);
     return true;
   }
@@ -80,12 +71,16 @@ struct reversi_client : public game_client {
  * @details
  */
   bool call_get_board (std::array<reversi_stone, 64> & board) {
+    LOG_DEBUG("call_get_board ...\n");
     if (!ctx_->send(REVERSI_COMMAND_GET_BOARD)){
+      LOG_DEBUG("call_get_board ... fail\n");
       return false;
     }
     if (!ctx_->recieve(board)) {
+      LOG_DEBUG("call_get_board ... fail\n");
       return false;
     }
+    LOG_DEBUG("call_get_board ... ok\n");
     return true;
   }
 
@@ -93,21 +88,23 @@ struct reversi_client : public game_client {
  * @details
  */
   bool call_put_stone (int x, int y, bool & success) {
+    LOG_DEBUG("call_put_stone ... x = %d, y = %d\n", x, y);
     if (!ctx_->send(REVERSI_COMMAND_PUT_STONE)){
       return false;
     }
     if (!ctx_->send(x)) {
+      LOG_DEBUG("call_put_stone ... fail\n");
       return false;
     }
     if (!ctx_->send(y)) {
+      LOG_DEBUG("call_put_stone ... fail\n");
       return false;
     }
     if (!ctx_->recieve(success)) {
+      LOG_DEBUG("call_put_stone ... fail\n");
       return false;
     }
-    if (!success) {
-      return false;
-    }
+    LOG_DEBUG("call_put_stone ... ok ... success = %s\n", success ? "true" : "false");
     return true;
   }
 

@@ -39,7 +39,7 @@ struct reversi : public game {
  */
   bool api_add_user (unsigned int & token) {
     std::lock_guard<std::mutex> lock(mtx_);
-    LOG_DEBUG("add_user ...\n");
+    LOG_DEBUG("add_user ... token = %02x\n", token);
     for (int i = 0; i < 16; ++i) {
       unsigned int tok = random_engine_();
       if (tok != 0 && userset_.count(tok) == 0) {
@@ -57,10 +57,10 @@ struct reversi : public game {
  *  @details
  *  require auth.
  */
-  bool api_make_player (int token, bool & is_black) {
+  bool api_make_player (unsigned int token, bool & is_black) {
     std::lock_guard<std::mutex> lock(mtx_);
 
-    LOG_DEBUG("make_player ... token = %u\n", token);
+    LOG_DEBUG("make_player ... token = %08x\n", token);
     if (!check_user(token)) {
       LOG_DEBUG("make_player ... fail\n");
       return false;
@@ -87,6 +87,7 @@ struct reversi : public game {
       return true;
     }
 
+    init_board();
     status_ = REVERSI_STATUS_BLACK_TURN;
     LOG_DEBUG("make_player ... ok ... is_black = %s\n", is_black ? "true" : "false");
 
@@ -107,20 +108,36 @@ struct reversi : public game {
 
   bool api_put_stone (unsigned int token, int x, int y) {
     std::lock_guard<std::mutex> lock(mtx_);
+    LOG_DEBUG("put_stone ...\n");
 
     if (player_black_ == token) {
+      LOG_DEBUG("player is black\n");
       if (status_ != REVERSI_STATUS_BLACK_TURN) {
+        LOG_DEBUG("put_stone ... fail ... not black's turn.\n");
         return false;
       }
+      if (!check_put_stone(true, x, y)) {
+        LOG_DEBUG("put_stone ... fail ... invalid put.\n");
+        return false;
+      }
+      LOG_DEBUG("put_stone ... ok\n");
       status_ = REVERSI_STATUS_WHITE_TURN;
       return true;
     } else if (player_white_ == token) {
+      LOG_DEBUG("player is white\n");
       if (status_ != REVERSI_STATUS_WHITE_TURN) {
+        LOG_DEBUG("put_stone ... fail ... not white's turn.\n");
         return false;
       }
+      if (!check_put_stone(false, x, y)) {
+        LOG_DEBUG("put_stone ... fail ... invalid put.\n");
+        return false;
+      }
+      LOG_DEBUG("put_stone ... ok\n");
       status_ = REVERSI_STATUS_BLACK_TURN;
       return true;
     } else {
+      LOG_DEBUG("put_stone ... fail\n");
       return false;
     }
   }
@@ -162,7 +179,81 @@ private:
   reversi_status status_;
 
   bool check_user (unsigned int token) {
-    return userset_.count(token) == 0;
+    return userset_.count(token) != 0;
+  }
+  void init_board() {
+    for (reversi_stone & stone : board_) {
+      stone = reversi_stone::EMPTY;
+    }
+    board_[3 + 8 * 3] = reversi_stone::WHITE;
+    board_[4 + 8 * 4] = reversi_stone::WHITE;
+    board_[3 + 8 * 4] = reversi_stone::BLACK;
+    board_[4 + 8 * 3] = reversi_stone::BLACK;
+  }
+
+  bool check_put_stone (bool is_black, int x, int y) {
+    if (!(0 <= x && x < 8)) {
+      return false;
+    }
+    if (!(0 <= y && y < 8)) {
+      return false;
+    }
+    if (board_[x + 8 * y] != reversi_stone::EMPTY) {
+      return false;
+    }
+
+    std::array<int, 16> K{
+      1, 0,
+      1, 1,
+      0, 1,
+      -1, 1,
+      -1, 0,
+      -1, -1,
+      0, -1,
+      1, -1
+    };
+
+    reversi_stone my = is_black ? reversi_stone::BLACK : reversi_stone::WHITE;
+    reversi_stone other = is_black ? reversi_stone::WHITE : reversi_stone::BLACK;
+
+    auto board = board_;
+
+    bool flag = false;
+    for (int i = 0; i < 8; ++i) {
+      int kx = K[2 * i];
+      int ky = K[2 * i + 1];
+      int x1 = x + kx;
+      int y1 = y + ky;
+
+      if (!(0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8)) {
+        continue;
+      }
+      if (board[x1 + 8 * y1] != other) {
+        continue;
+      }
+      x1 += kx;
+      y1 += ky;
+
+     int j = 1;
+      while (0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8) {
+        if (board_[x1 + 8 * y1] == my) {
+          for (int l = 1; l < j; ++l) {
+            int x2 = x + l * kx;
+            int y2 = y + l * ky;
+            board[x2 + 8 * y2] = my;
+          }
+          flag = true;
+          break;
+        }
+        ++j;
+        x1 += kx;
+        y1 += ky;
+      }
+    }
+    if (flag) {
+      board_ = board;
+    }
+    return flag;
   }
 };
 

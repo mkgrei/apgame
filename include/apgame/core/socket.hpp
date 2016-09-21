@@ -1,5 +1,7 @@
 #pragma once
 
+#include <apgame/core/logging.hpp>
+
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -46,6 +48,14 @@ struct socket {
   template <class T>
   bool async_send_data (T const & data, std::size_t size, boost::asio::yield_context & yield) noexcept {
     boost::system::error_code error;
+    unsigned char const * ptr = reinterpret_cast<unsigned char const *>(&data);
+    LOG_DEBUG("send data = %02x%02x%02x%02x, size = %zu\n",
+      (size > 0 ? ptr[0] : 0),
+      (size > 1 ? ptr[1] : 0),
+      (size > 2 ? ptr[2] : 0),
+      (size > 3 ? ptr[3] : 0),
+      size
+    );
     boost::asio::async_write(
       socket_,
       boost::asio::buffer(&data, size),
@@ -63,12 +73,21 @@ struct socket {
   template <class T>
   bool async_recieve_data (T & data, std::size_t size, boost::asio::yield_context & yield) noexcept {
     boost::system::error_code error;
+    unsigned char const * ptr = reinterpret_cast<unsigned char const *>(&data);
     boost::asio::async_read(
       socket_,
       boost::asio::buffer(&data, size),
       boost::asio::transfer_exactly(size),
       yield[error]
     );
+    LOG_DEBUG("recieve data = %02x%02x%02x%02x, size = %zu\n",
+      (size > 0 ? ptr[0] : 0),
+      (size > 1 ? ptr[1] : 0),
+      (size > 2 ? ptr[2] : 0),
+      (size > 3 ? ptr[3] : 0),
+      size
+    );
+
     return !error;
   }
 

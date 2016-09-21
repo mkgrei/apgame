@@ -70,18 +70,7 @@ private:
       LOG_DEBUG("add_user ... fail.\n");
       return false;
     }
-    unsigned int val;
-    if (!ctx_.recieve(val)) {
-      LOG_DEBUG("add_user ... fail.\n");
-      return false;
-    }
-    LOG_DEBUG("add_user ... %08x\n", val);
-     if (!ctx_.recieve(val)) {
-      LOG_DEBUG("add_user ... fail.\n");
-      return false;
-    }
-    LOG_DEBUG("add_user ... %08x\n", val);
-   
+
     if (!game_.api_add_user(token)) {
       return false;
     }
@@ -134,10 +123,6 @@ private:
       LOG_DEBUG("get_game_status ... fail\n");
       return false;
     }
-    if (!ctx_.send(status)) {
-      LOG_DEBUG("get_game_status ... fail\n");
-      return false;
-    }
 
 //     LOG_DEBUG("get_game_status ... status = %d\n", status);
     return true;
@@ -148,12 +133,16 @@ private:
  */
   bool handle_get_board () {
     std::array<reversi_stone, 64> board;
+    LOG_DEBUG("get_board ...\n");
     if (!game_.api_get_board(board)) {
+      LOG_DEBUG("get_board ... fail\n");
       return false;
     }
     if (!ctx_.send(board)) {
+      LOG_DEBUG("get_board ... fail\n");
       return false;
     }
+    LOG_DEBUG("get_board ... ok\n");
     return true;
   }
 
@@ -166,19 +155,28 @@ private:
  *  [bool success]
  */
   bool handle_put_stone () {
-    int x;
-    int y;
+    int x = 0;
+    int y = 0;
+    LOG_DEBUG("put_stone ...\n");
     if (!ctx_.recieve(x)) {
+      LOG_DEBUG("put_stone ... fail\n");
       return false;
     }
     if (!ctx_.recieve(y)) {
+      LOG_DEBUG("put_stone ... fail\n");
       return false;
     }
     if (!game_.api_put_stone(token_, x, y)) {
-      ctx_.send(false);
+      LOG_DEBUG("put_stone ... invalid put\n");
+      if (!ctx_.send(false)) {
+        return false;
+      }
+      return true;
+    }
+    if (!ctx_.send(true)) {
       return false;
     }
-    ctx_.send(true);
+    LOG_DEBUG("put_stone ... ok\n");
     return true;
   }
 
