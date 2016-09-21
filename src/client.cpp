@@ -8,22 +8,24 @@
 #include <string>
 #include <random>
 
-void myplayer (bool is_black, std::array<apgame::reversi_stone, 64> const & board, int & x, int & y) {
-  static int X = 0;
-  static int Y = 0;
+struct myplayer {
+  void operator() (bool is_black, std::array<apgame::reversi_stone, 64> const & board, int & x, int & y) {
+    static int X = 0;
+    static int Y = 0;
 
-  ++X;
-  if (X == 8) {
-    ++Y;
-    X = 0;
+    ++X;
+    if (X == 8) {
+      ++Y;
+      X = 0;
+    }
+    if (Y == 8) {
+      X = 0;
+      Y = 0;
+    }
+    x = X;
+    y = Y;
   }
-  if (Y == 8) {
-    X = 0;
-    Y = 0;
-  }
-  x = X;
-  y = Y;
-}
+};
 
 int main (int argc, char ** argv) {
   apgame::client_option opt;
@@ -41,6 +43,6 @@ int main (int argc, char ** argv) {
   opt.remote_address(address);
 
   apgame::reversi_player player(opt, "mygame");
-  player.run(myplayer);
+  player.run(myplayer());
   return 0;
 }
