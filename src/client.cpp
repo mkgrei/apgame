@@ -28,9 +28,19 @@ void myplayer (bool is_black, std::array<apgame::reversi_stone, 64> const & boar
 int main (int argc, char ** argv) {
   apgame::client_option opt;
 
-  opt.remote_port(12345);
-  opt.remote_address("127.0.0.1");
+  if (argc < 3) {
+    std::cout << "usage:" << std::endl;
+    std::cout << "apgame-client port address" << std::endl;
+    return 1;
+  }
+
+  int port = std::atoi(argv[1]);
+  std::string address(argv[2]);
+
+  opt.remote_port(port);
+  opt.remote_address(address);
 
   apgame::reversi_player player(opt, "mygame");
   player.run(myplayer);
+  return 0;
 }
