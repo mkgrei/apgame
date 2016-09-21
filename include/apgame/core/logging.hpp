@@ -7,8 +7,10 @@ namespace apgame {
 
 template <class ... Args>
 void logging (char const * file, int line, char const * function, char const * format, Args const & ... args) {
+#ifndef NO_PRINTF
   std::printf("[%s:%d][%s] ", file, line, function);
   std::printf(format, args ...);
+#endif
 }
 
 }
