@@ -39,115 +39,128 @@ struct reversi : public game {
  */
   bool api_add_user (unsigned int & token) {
     std::lock_guard<std::mutex> lock(mtx_);
-    LOG_DEBUG("add_user ... token = %02x\n", token);
+    LOG_DEBUG("add_user: token = %u\n", token);
     for (int i = 0; i < 16; ++i) {
       unsigned int tok = random_engine_();
-      if (tok != 0 && userset_.count(tok) == 0) {
-        userset_.emplace(tok, user());
+      if (userset_.count(tok) == 0) {
+        userset_.emplace(tok, user()); 
         token = tok;
-        LOG_DEBUG("add_user ... ok ... token = %08x\n", tok);
+        LOG_DEBUG("add_user: ok, publish new token = %u\n", token);
         return true;
       }
     }
-    LOG_DEBUG("add_user ... fail\n");
+    LOG_ERROR("add_user: fail, hash table is too dense?\n");
     return false;
   }
 
 /**
  *  @details
- *  require auth.
  */
   bool api_make_player (unsigned int token, bool & is_black) {
     std::lock_guard<std::mutex> lock(mtx_);
 
-    LOG_DEBUG("make_player ... token = %08x\n", token);
+    LOG_DEBUG("make_player: token = %u\n", token);
     if (!check_user(token)) {
-      LOG_DEBUG("make_player ... fail\n");
+      LOG_ERROR("make_player: fail, unknown token = %u\n", token);
       return false;
     }
 
     if (status_ != REVERSI_STATUS_BEFORE_GAME) {
-      LOG_DEBUG("make_player ... fail\n");
+      LOG_ERROR("make_player: fail, invalid status = %d\n", status_);
       return false;
     }
 
     if (player_black_ == 0) {
       player_black_ = token;
       is_black = true;
+      userset_[token].is_black = true;
     } else if (player_white_ == 0) {
       player_white_ = token;
       is_black = false;
+      userset_[token].is_white = true;
     } else {
-      LOG_DEBUG("make_player ... fail\n");
+      LOG_ERROR("make_player: fail, there are already two players\n");
       return false;
     }
 
     if (player_black_ == 0 || player_white_ == 0) {
-      LOG_DEBUG("make_player ... ok ... is_black = %s\n", is_black ? "true" : "false");
+      LOG_DEBUG("make_player: ok, is_black = %s\n", is_black ? "true" : "false");
       return true;
     }
 
     init_board();
     status_ = REVERSI_STATUS_BLACK_TURN;
-    LOG_DEBUG("make_player ... ok ... is_black = %s\n", is_black ? "true" : "false");
-
+    LOG_DEBUG("make_player: ok, is_black = %s\n", is_black ? "true" : "false");
+    LOG_INFO("game started\n");
     return true;
   }
 
   bool api_get_game_status (reversi_status & status) const noexcept {
     std::lock_guard<std::mutex> lock(mtx_);
+    LOG_DEBUG("get_game_status: status = %d\n", status);
     status = status_;
+    LOG_DEBUG("get_game_status: ok, status = %d\n", status);
     return true;
   }
 
   bool api_get_board (std::array<reversi_stone, 64> & board) const noexcept {
+    LOG_DEBUG("get_board:\n");
     std::lock_guard<std::mutex> lock(mtx_);
     board = board_;
+    LOG_DEBUG("get_board: ok\n");
     return true;
   }
 
   bool api_put_stone (unsigned int token, int x, int y) {
     std::lock_guard<std::mutex> lock(mtx_);
-    LOG_DEBUG("put_stone ...\n");
+    LOG_DEBUG("put_stone: token = %u, x = %d, y = %d\n", token, x, y);
 
-    if (player_black_ == token) {
-      LOG_DEBUG("player is black\n");
-      if (status_ != REVERSI_STATUS_BLACK_TURN) {
-        LOG_DEBUG("put_stone ... fail ... not black's turn.\n");
-        return false;
-      }
-      if (!check_put_stone(true, x, y)) {
-        LOG_DEBUG("put_stone ... fail ... invalid put.\n");
-        return false;
-      }
-      LOG_DEBUG("put_stone ... ok\n");
-      status_ = REVERSI_STATUS_WHITE_TURN;
-      return true;
-    } else if (player_white_ == token) {
-      LOG_DEBUG("player is white\n");
-      if (status_ != REVERSI_STATUS_WHITE_TURN) {
-        LOG_DEBUG("put_stone ... fail ... not white's turn.\n");
-        return false;
-      }
-      if (!check_put_stone(false, x, y)) {
-        LOG_DEBUG("put_stone ... fail ... invalid put.\n");
-        return false;
-      }
-      LOG_DEBUG("put_stone ... ok\n");
-      status_ = REVERSI_STATUS_BLACK_TURN;
-      return true;
-    } else {
-      LOG_DEBUG("put_stone ... fail\n");
+    bool is_black = (player_black_ == token ? true : false);
+    bool is_white = (player_white_ == token ? true : false);
+
+    if (!is_black && !is_white) {
       return false;
     }
+
+    LOG_DEBUG("put_stone: player is %s\n", is_black ? "black" : "false");
+
+    if (is_black && status_ != REVERSI_STATUS_BLACK_TURN) {
+      LOG_ERROR("put_stone: fail, invalid turn = %d\n", status_);
+      return false;
+    }
+    if (is_white && status_ != REVERSI_STATUS_WHITE_TURN) {
+      LOG_ERROR("put_stone: fail, invalid turn = %d\n", status_);
+      return false;
+    }
+
+    if (!check_put_stone(is_black, x, y)) {
+      LOG_ERROR("put_stone: fail, invalid put\n");
+      return false;
+    }
+    LOG_DEBUG("put_stone: ok\n");
+    status_ = is_black ? REVERSI_STATUS_WHITE_TURN : REVERSI_STATUS_BLACK_TURN;
+    return true;
   }
 
   bool api_close (int token) {
+    LOG_DEBUG("api_close: token = %u\n", token);
     std::lock_guard<std::mutex> lock(mtx_);
     if (!check_user(token)) {
+      LOG_DEBUG("api_close: fail, unknown user\n", token);
       return false;
     }
-    userset_[token].active = false;
+    auto & user = userset_[token];
+    if (!user.is_black && !user.is_white) {
+      userset_.erase(token);
+    } else if (user.is_black && status_ == REVERSI_STATUS_BEFORE_GAME) {
+      player_black_ = 0;
+      userset_.erase(token);
+    } else if (user.is_white && status_ == REVERSI_STATUS_BEFORE_GAME) {
+      player_white_ = 0;
+      userset_.erase(token);
+    }
+
+    LOG_DEBUG("api_close: ok\n");
     return true;
   }
 
@@ -157,14 +170,12 @@ private:
 
     user () noexcept {
       last_comm_timestamp = std::time(NULL);
-      active = true;
-      is_player = false;
+      is_white = false;
       is_black = false;
     }
 
-    bool active;
-    bool is_player;
     bool is_black;
+    bool is_white;
     std::time_t last_comm_timestamp;
   };
 
@@ -179,8 +190,9 @@ private:
   reversi_status status_;
 
   bool check_user (unsigned int token) {
-    return userset_.count(token) != 0;
+    return userset_.count(token) > 0;
   }
+
   void init_board() {
     for (reversi_stone & stone : board_) {
       stone = reversi_stone::EMPTY;
@@ -234,10 +246,10 @@ private:
       x1 += kx;
       y1 += ky;
 
-     int j = 1;
+     int j = 2;
       while (0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8) {
         if (board_[x1 + 8 * y1] == my) {
-          for (int l = 1; l < j; ++l) {
+          for (int l = 0; l < j; ++l) {
             int x2 = x + l * kx;
             int y2 = y + l * ky;
             board[x2 + 8 * y2] = my;
@@ -252,9 +264,29 @@ private:
     }
     if (flag) {
       board_ = board;
+      print_board();
     }
     return flag;
   }
+
+  void print_board() {
+    for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        reversi_stone stone = board_[x + 8 * y];
+        if (stone == reversi_stone::EMPTY) {
+          std::cout << '.';
+        }
+        if (stone == reversi_stone::WHITE) {
+          std::cout << 'W';
+        }
+        if (stone == reversi_stone::BLACK) {
+          std::cout << 'B';
+        }
+      }
+      std::cout << std::endl;
+    }
+  }
+
 };
 
 }

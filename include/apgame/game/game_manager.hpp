@@ -27,16 +27,19 @@ struct game_manager {
     while (true) {
       game_command cmd;
       if (!ctx.recieve(cmd)) {
-        LOG_DEBUG("fail to parse request.\n");
+        LOG_ERROR("fail to recieve command\n");
         return;
       }
-      switch (cmd) {
+ 
+     switch (cmd) {
       case GAME_COMMAND_JOIN_GAME:
-        handle_join_game();
+        if (!handle_join_game()) {
+
+        }
         break;
       default:
-        LOG_DEBUG("unknown command = %d.\n", cmd);
-        return;
+        LOG_ERROR("unknown command = %d\n", cmd);
+        break;
       };
     }
   }
@@ -59,7 +62,7 @@ private:
 
     game_id id;
     if (!ctx_->recieve(id)) {
-      LOG_DEBUG("handle_join_game ... fail\n");
+      LOG_ERROR("fail to recieve game_id\n");
       return false;
     }
     LOG_DEBUG("recieve id = %d\n", id);
@@ -67,7 +70,7 @@ private:
     std::string name;
 
     if (!ctx_->recieve(name, 128)) {
-      LOG_DEBUG("handle_join_game ... fail\n");
+      LOG_ERROR("fail to recieve name\n");
       return false;
     }
     LOG_DEBUG("recieve name = %s\n", name.data());
@@ -75,12 +78,16 @@ private:
 
     switch (id) {
     case GAME_ID_REVERSI:
-      ctx_->send(true);
+      if (!ctx_->send(true)) {
+        LOG_ERROR("fail to return status\n");
+      }
       join_game_reversi(name);
       return true;
     default:
-      LOG_DEBUG("handle_join_game ... fail\n");
-      ctx_->send(false);
+      LOG_DEBUG("unknown gameid = %d\n", id);
+      if (!ctx_->send(false)) {
+        LOG_DEBUG("unknown gameid = %d\n", id);
+      }
       return false;
     }
   }
@@ -92,15 +99,8 @@ private:
       game_.emplace(name, std::unique_ptr<game>(new reversi));
     }
     auto & game = *game_[name];
-    if (game.get_game_id() != GAME_ID_REVERSI) {
-      LOG_DEBUG("join_game_reversi ... fail\n");
-      ctx_->send(false);
-    } else {
-      ctx_->send(true);
-      LOG_DEBUG("join_game ... ok\n");
-      reversi_api api(static_cast<reversi &>(game), *ctx_);
-      api.run();
-    }
+    reversi_api api(static_cast<reversi &>(game), *ctx_);
+    api.run();
   }
 };
 

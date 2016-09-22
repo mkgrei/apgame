@@ -21,27 +21,19 @@ struct game_client {
   bool call_join_game (game_id id, std::string const & name) {
     LOG_INFO("join_game game_id = %d, name = %s\n", id, name.data());
     if (!ctx_->send(GAME_COMMAND_JOIN_GAME)) {
-      LOG_INFO("join_game ... fail\n");
+      LOG_ERROR("fail to send command\n");
       return false;
     }
     if (!ctx_->send(id)) {
-      LOG_INFO("join_game ... fail\n");
+      LOG_ERROR("fail to send game id\n");
       return false;
     }
     if (!ctx_->send(name)) {
-      LOG_INFO("join_game ... fail\n");
+      LOG_ERROR("fail to send game name\n");
       return false;
     }
 
     bool status;
-    if (!ctx_->recieve(status)) {
-      LOG_INFO("join_game ... fail\n");
-      return false;
-    }
-    if (!status) {
-      LOG_INFO("join_game ... fail\n");
-      return false;
-    }
     if (!ctx_->recieve(status)) {
       LOG_INFO("join_game ... fail\n");
       return false;

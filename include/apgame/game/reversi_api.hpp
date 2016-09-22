@@ -14,39 +14,41 @@ struct reversi_api : public game_api {
   }
 
   void run () override {
-    while (true) {
+    bool flag = true;
+    while (flag) {
       reversi_command cmd;
       if (!ctx_.recieve(cmd)) {
-        LOG_DEBUG("fail to parse request.\n");
-        return;
+        LOG_DEBUG("fail to parse command\n");
+        break;
       }
 
       // if handle_XXX return true, keep loop.
       // if handle_XXX return false, break loop.
       switch (cmd) {
       case REVERSI_COMMAND_ADD_USER:
-        if (!handle_add_user()) { return; }
+        flag = handle_add_user();
         break;
       case REVERSI_COMMAND_MAKE_PLAYER:
-        if (!handle_make_player()) { return; }
+        flag = handle_make_player();
         break;
       case REVERSI_COMMAND_GET_GAME_STATUS:
-        if (!handle_get_game_status()) { return; }
+        flag = handle_get_game_status();
         break;
       case REVERSI_COMMAND_GET_BOARD:
-        if (!handle_get_board()) { return; }
+        flag = handle_get_board();
         break;
       case REVERSI_COMMAND_PUT_STONE:
-        if (!handle_put_stone()) { return; }
+        flag = handle_put_stone();
         break;
       case REVERSI_COMMAND_CLOSE:
-        if (!handle_close()) { return; }
+        flag = handle_close();
         break;
       default:
         LOG_DEBUG("unknown command %d\n", cmd);
         return;
       }
     }
+    handle_close();
   }
 
 
@@ -63,24 +65,26 @@ private:
  * [unsigned int token]
  */
   bool handle_add_user () {
-    LOG_DEBUG("add_user ...\n");
+    LOG_DEBUG("add_user\n");
 
     unsigned int token;
     if (!ctx_.recieve(token)) {
-      LOG_DEBUG("add_user ... fail.\n");
+      LOG_ERROR("fail to recieve token\n");
       return false;
     }
 
     if (!game_.api_add_user(token)) {
-      return false;
-    }
-    token_ = token;
-    if (!ctx_.send(token_)) {
-      LOG_DEBUG("add_user ... fail.\n");
-      return false;
+      token_ = 0;
+    } else {
+      token_ = token;
     }
 
-    LOG_DEBUG("add_user ... ok ... token = %08x\n", token);
+    if (!ctx_.send(token_)) {
+      LOG_ERROR("fail to send token = %u\n", token_);
+      token_ = 0;
+      return false;
+    }
+    LOG_DEBUG("success to add user, token = %u\n", token_);
     return true;
   }
 
@@ -157,23 +161,25 @@ private:
   bool handle_put_stone () {
     int x = 0;
     int y = 0;
-    LOG_DEBUG("put_stone ...\n");
+    LOG_DEBUG("put_stone\n");
     if (!ctx_.recieve(x)) {
-      LOG_DEBUG("put_stone ... fail\n");
+      LOG_ERROR("put_stone: fail, recieve x\n");
       return false;
     }
     if (!ctx_.recieve(y)) {
-      LOG_DEBUG("put_stone ... fail\n");
+      LOG_ERROR("put_stone: fail, recieve y\n");
       return false;
     }
     if (!game_.api_put_stone(token_, x, y)) {
-      LOG_DEBUG("put_stone ... invalid put\n");
+      LOG_ERROR("put_stone: fail, invalid put\n");
       if (!ctx_.send(false)) {
+        LOG_ERROR("put_stone: fail, send status\n");
         return false;
       }
       return true;
     }
     if (!ctx_.send(true)) {
+      LOG_ERROR("put_stone: fail, send status\n");
       return false;
     }
     LOG_DEBUG("put_stone ... ok\n");
@@ -185,7 +191,7 @@ private:
  */
   bool handle_close () {
     game_.api_close(token_);
-    return true;
+    return false;
   }
 
 /**
