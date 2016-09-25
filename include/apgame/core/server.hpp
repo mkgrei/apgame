@@ -32,12 +32,11 @@ struct server {
     worker_(opt.num_worker()),
     is_running_{false}
   {
-    LOG_INFO("server constructor begin\n");
+    LOG_INFO("server:\n");
     for (int i = 0; i < opt.max_connection(); ++i) {
       socket_.emplace_back(io_service_);
     }
-    LOG_INFO("add %d sockets\n", opt.max_connection());
-    LOG_INFO("server constructor end.\n");
+    LOG_INFO("server: max_connection - %d\n", opt.max_connection());
   }
 
   // server-functionality
@@ -55,17 +54,17 @@ struct server {
  */
   template <class Handler>
   void run (Handler && handler) {
-    LOG_INFO("run begin\n");
+    LOG_INFO("run:\n");
 
     auto local_address = acceptor_.local_endpoint().address().to_string();
     auto local_port = acceptor_.local_endpoint().port();
  
-    LOG_INFO("local_address = %s\n", local_address.data());
-    LOG_INFO("local_port = %d\n", local_port);
+    LOG_INFO("run: local_address = %s\n", local_address.data());
+    LOG_INFO("run: local_port = %d\n", local_port);
+    LOG_INFO("run: num_worker %d\n", opt_.num_worker());
 
     is_running_ = true;
 
-    LOG_INFO("launching %d workers ...\n", opt_.num_worker());
     // global exception handler
     try {
       for (std::thread & worker : worker_) {
@@ -73,16 +72,15 @@ struct server {
           boost::system::error_code error;
           io_service_.run(error);
           if (error) {
-            LOG_FATAL("worker(id = %PRlu64) has an fatal error.\n", get_thread_id());
-            LOG_FATAL("error = %s\n", error.message().data());
+            LOG_ERROR("run: worker (id = %PRlu64) has an fatal error, error message = %s\n", get_thread_id());
+            LOG_ERROR("run: error = %s\n", error.message().data());
           }
         });
       }
-      LOG_INFO("launched workers.\n");
+      LOG_INFO("run: launched workers\n");
   
-      LOG_INFO("launching accept socket...\n");
       register_accept_event(handler);
-      LOG_INFO("launched accept socket.\n");
+      LOG_INFO("run: launched acceptor socket\n");
   
       for (std::thread & worker : worker_) {
         if (worker.joinable()) {
@@ -90,11 +88,10 @@ struct server {
         }
       }
 
-    } catch (...) {
-      LOG_INFO("launched workers.\n");
+    } catch (std::exception & e) {
+      LOG_FATAL("run: unknown error occured. message = %s\n", e.what());
 
     }
-    LOG_INFO("run end\n");
   }
 
 /**
