@@ -10,7 +10,8 @@ namespace apgame {
 struct reversi_api : public game_api {
 
   reversi_api (reversi & game, context & ctx)
-  : game_{game}, ctx_{ctx} {
+  : game_(game)
+  , ctx_(ctx) {
   }
 
   void run () override {

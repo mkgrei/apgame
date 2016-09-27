@@ -11,8 +11,8 @@ namespace apgame {
 struct context {
 
   context (socket & s, boost::asio::yield_context & yield)
-  : socket_{s}
-  , yield_{yield} {
+  : socket_(s)
+  , yield_(yield) {
   }
 
   template <class T>
