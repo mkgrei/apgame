@@ -12,7 +12,8 @@ int main (int argc, char ** argv) {
   options_description opt_desc("apgame-server");
   opt_desc.add_options()
     ("help,h", "show help.")
-    ("local-port", value<int>()->default_value(12345), "local server port")
+    ("host", value<std::string>(), "local server host")
+    ("port", value<int>()->default_value(12345), "local server port")
   ;
  
   variables_map vm;
@@ -26,7 +27,8 @@ int main (int argc, char ** argv) {
 
   apgame::server_option server_option;
   server_option 
-    .local_port(vm["local-port"].as<int>())
+    .local_address(vm["host"].as<std::string>())
+    .local_port(vm["port"].as<int>())
     .max_connection(2)
   ;
 
