@@ -54,7 +54,7 @@ void log_ (char const * v) {
   std::cerr << v;
 }
 
-void log_ (boost::system::cerror_code const & ec) {
+void log_ (boost::system::error_code const & ec) {
   std::cerr << ec.message();
 }
 
