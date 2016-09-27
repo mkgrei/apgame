@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/system/cerror_code.hpp>
+#include <boost/system/error_code.hpp>
 
 #include <cstdint>
 #include <cstdio>
