@@ -9,6 +9,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -s -DNDEBUG -march=native")
 include_directories(include)
 
 add_subdirectory(src)
+add_subdirectory(docker)
 
 # used in unittest and profile.
 # include(cmake/gtest.cmake)
