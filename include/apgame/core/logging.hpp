@@ -41,17 +41,11 @@ void log (T const & t, Args const & ... args) {
 
 }
 
-enum log_level {
-  INFO,
-  DEBUG,
-  ERROR,
-  FATAL
-};
-
 template <class ... Args>
-void log (log_level level, char const * file, int line, char const * func, Args const & ... args) {
+void log (char const * level, char const * file, int line, char const * func, Args const & ... args) {
   auto now = boost::posix_time::second_clock::local_time();
 
+  std::cout << '[' << level << ']';
   std::cout << '[' << boost::posix_time::to_iso_string(now) << ']';
   std::cout << '[' << file << ':' << line << ']';
   std::cout << '[' << func << ']';
@@ -64,7 +58,7 @@ void log (log_level level, char const * file, int line, char const * func, Args 
 
 }
 
-#define LOG_INFO(...) apgame::log(apgame::INFO, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-#define LOG_DEBUG(...) apgame::log(apgame::DEBUG, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-#define LOG_ERROR(...) apgame::log(apgame::ERROR, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-#define LOG_FATAL(...) apgame::log(apgame::FATAL, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define LOG_INFO(...) apgame::log("INFO", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define LOG_DEBUG(...) apgame::log("DEBUG", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define LOG_ERROR(...) apgame::log("ERROR", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define LOG_FATAL(...) apgame::log("FATAL", __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
