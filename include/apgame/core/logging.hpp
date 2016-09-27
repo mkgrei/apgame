@@ -3,8 +3,9 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/system/error_code.hpp>
 
-#include <cstdlib>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 
 namespace apgame {
 
@@ -13,29 +14,53 @@ namespace impl {
 void log () {
 }
 
-void log (int const & v) {
+void log_ (std::int8_t const & v) {
   std::cout << v;
 }
 
-void log (std::size_t const & v) {
+void log_ (std::uint8_t const & v) {
   std::cout << v;
 }
 
-void log (std::string const & v) {
+void log_ (std::int16_t const & v) {
   std::cout << v;
 }
 
-void log (char const * v) {
+void log_ (std::uint16_t const & v) {
   std::cout << v;
 }
 
-void log (boost::system::error_code const & ec) {
+void log_ (std::int32_t const & v) {
+  std::cout << v;
+}
+
+void log_ (std::uint32_t const & v) {
+  std::cout << v;
+}
+
+void log_ (std::int64_t const & v) {
+  std::cout << v;
+}
+
+void log_ (std::uint64_t const & v) {
+  std::cout << v;
+}
+
+void log_ (std::string const & v) {
+  std::cout << v;
+}
+
+void log_ (char const * v) {
+  std::cout << v;
+}
+
+void log_ (boost::system::error_code const & ec) {
   std::cout << ec.message();
 }
 
 template <class T, class ... Args>
 void log (T const & t, Args const & ... args) {
-  log(t);
+  log_(t);
   log(args ...);
 }
 

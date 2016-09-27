@@ -32,11 +32,11 @@ struct server {
     worker_(opt.num_worker()),
     is_running_{false}
   {
-    LOG_INFO("server:\n");
+    LOG_INFO("constructor:\n");
     for (int i = 0; i < opt.max_connection(); ++i) {
       socket_.emplace_back(io_service_);
     }
-    LOG_INFO("server: max_connection - %d\n", opt.max_connection());
+    LOG_INFO("constructor: max_connection = ", opt.max_connection());
   }
 
   // server-functionality
@@ -54,14 +54,14 @@ struct server {
  */
   template <class Handler>
   void run (Handler && handler) {
-    LOG_INFO("run:\n");
+    LOG_INFO("start\n");
 
-    auto local_address = acceptor_.local_endpoint().address().to_string();
+    auto local_address = acceptor_.local_endpoint().address();
     auto local_port = acceptor_.local_endpoint().port();
  
-    LOG_INFO("run: local_address = %s\n", local_address.data());
-    LOG_INFO("run: local_port = %d\n", local_port);
-    LOG_INFO("run: num_worker %d\n", opt_.num_worker());
+    LOG_INFO("local_address = ", local_address.to_string());
+    LOG_INFO("local_port = ", local_port);
+    LOG_INFO("num_worker = ", opt_.num_worker());
 
     is_running_ = true;
 
@@ -72,15 +72,14 @@ struct server {
           boost::system::error_code error;
           io_service_.run(error);
           if (error) {
-            LOG_ERROR("run: worker (id = %PRlu64) has an fatal error, error message = %s\n", get_thread_id());
-            LOG_ERROR("run: error = %s\n", error.message().data());
+            LOG_ERROR("worker (id = ", get_thread_id(), " has an fatal error, error message = ", error);
           }
         });
       }
-      LOG_INFO("run: launched workers\n");
+      LOG_INFO("launched workers");
   
       register_accept_event(handler);
-      LOG_INFO("run: launched acceptor socket\n");
+      LOG_INFO("launched acceptor socket");
   
       for (std::thread & worker : worker_) {
         if (worker.joinable()) {
@@ -89,7 +88,7 @@ struct server {
       }
 
     } catch (std::exception & e) {
-      LOG_FATAL("run: unknown error occured. message = %s\n", e.what());
+      LOG_FATAL("unknown error occured. message = ", e.what());
 
     }
   }
@@ -190,22 +189,22 @@ private:
         continue;
       }
 
-      LOG_DEBUG("disconnected socket found.\n");
-      LOG_DEBUG("id = %d.\n", i);
-      LOG_DEBUG("start accepting.\n", i);
+      LOG_DEBUG("disconnected socket found");
+      LOG_DEBUG("id = ", i);
+      LOG_DEBUG("start accepting");
       acceptor_.async_accept(
         socket.socket_,
         [&, i] (boost::system::error_code const & error) {
           if (error) {
-            LOG_ERROR("acceptor has an error.\n");
-            LOG_ERROR("message = %s.\n", error.message());
+            LOG_ERROR("acceptor has an error");
+            LOG_ERROR("message = ", error.message());
             return;
           }
           try { 
             on_accept(handler, socket_[i]);
           } catch (std::exception const & e) {
-            LOG_ERROR("acceptor has an error.\n");
-            LOG_ERROR("message = %s.\n", e.what()); 
+            LOG_ERROR("acceptor has an error");
+            LOG_ERROR("message = ", e.what()); 
           }
         }
       );
@@ -215,41 +214,41 @@ private:
 
   template <class Handler>
   void on_accept (Handler & handler, server_socket & socket) {
-    LOG_INFO("accept event.\n");
+    LOG_INFO("accept event");
 
     auto remote_address = socket.remote_address();
     auto remote_port = socket.remote_port();
 
-    LOG_INFO("remote_address = %s.\n", remote_address.data());
-    LOG_INFO("remote_port = %d.\n", remote_port);
+    LOG_INFO("remote_address = ", remote_address.data());
+    LOG_INFO("remote_port = ", remote_port);
 
     socket.socket_.set_option(boost::asio::socket_base::reuse_address(true));
     socket.is_connected_ = true;
 
-    LOG_DEBUG("spawn context.\n");
+    LOG_DEBUG("spawn context");
     boost::asio::spawn(io_service_, [&] (boost::asio::yield_context yield) {
       socket_context(handler, socket, yield);
     });
-    LOG_DEBUG("restart accept.\n");
+    LOG_DEBUG("restart accept");
     register_accept_event(handler);
   }
 
   template <class Handler>
   void socket_context (Handler & handler, server_socket & socket, boost::asio::yield_context & yield) {
-    LOG_DEBUG("start context.\n");
+    LOG_DEBUG("start context");
     context ctx(socket, yield);
     try {
       handler(ctx);
-      LOG_DEBUG("finish handler.\n");
-      LOG_DEBUG("close socket.\n");
+      LOG_DEBUG("finish handler");
+      LOG_DEBUG("close socket");
       socket.close();
     } catch (std::exception const & e) {
-      LOG_DEBUG("socket has an error.\n");
-      LOG_DEBUG("message = %s.\n", e.what());
-      LOG_DEBUG("close socket.\n");
+      LOG_DEBUG("socket has an error");
+      LOG_DEBUG("message = ", e.what());
+      LOG_DEBUG("close socket");
       socket.close();
     }
-    LOG_DEBUG("end context.\n");
+    LOG_DEBUG("end context");
   }
 };
 
