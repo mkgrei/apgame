@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/system/error_code.hpp>
+#include <boost/system/cerror_code.hpp>
 
 #include <cstdint>
 #include <cstdio>
@@ -15,47 +15,47 @@ void log () {
 }
 
 void log_ (std::int8_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::uint8_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::int16_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::uint16_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::int32_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::uint32_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::int64_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::uint64_t const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (std::string const & v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
 void log_ (char const * v) {
-  std::cout << v;
+  std::cerr << v;
 }
 
-void log_ (boost::system::error_code const & ec) {
-  std::cout << ec.message();
+void log_ (boost::system::cerror_code const & ec) {
+  std::cerr << ec.message();
 }
 
 template <class T, class ... Args>
@@ -70,14 +70,14 @@ template <class ... Args>
 void log (char const * level, char const * file, int line, char const * func, Args const & ... args) {
   auto now = boost::posix_time::second_clock::local_time();
 
-  std::cout << '[' << level << ']';
-  std::cout << '[' << boost::posix_time::to_iso_string(now) << ']';
-  std::cout << '[' << file << ':' << line << ']';
-  std::cout << '[' << func << ']';
-  std::cout << ' ';
+  std::cerr << '[' << level << ']';
+  std::cerr << '[' << boost::posix_time::to_iso_string(now) << ']';
+  std::cerr << '[' << file << ':' << line << ']';
+  std::cerr << '[' << func << ']';
+  std::cerr << ' ';
 
   impl::log(args ...);
-  std::cout << std::endl;
+  std::cerr << std::endl;
 }
 
 
