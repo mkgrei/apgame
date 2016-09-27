@@ -118,7 +118,14 @@ private:
   std::array<reversi_stone, 64> board_;
 
   void print_board() {
+    std::cout << ' ';
+    for (int x = 0; x < 8; ++x) {
+      std::cout << x;
+    }
+    std::cout << std::endl;
+
     for (int y = 0; y < 8; ++y) {
+      std::cout << y;
       for (int x = 0; x < 8; ++x) {
         reversi_stone stone = board_[x + 8 * y];
         if (stone == reversi_stone::EMPTY) {
