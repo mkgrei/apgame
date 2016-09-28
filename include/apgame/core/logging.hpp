@@ -14,54 +14,54 @@ namespace impl {
 void log () {
 }
 
-void log_ (std::int8_t const & v) {
+void log (std::int8_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::uint8_t const & v) {
+void log (std::uint8_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::int16_t const & v) {
+void log (std::int16_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::uint16_t const & v) {
+void log (std::uint16_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::int32_t const & v) {
+void log (std::int32_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::uint32_t const & v) {
+void log (std::uint32_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::int64_t const & v) {
+void log (std::int64_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::uint64_t const & v) {
+void log (std::uint64_t const & v) {
   std::cerr << v;
 }
 
-void log_ (std::string const & v) {
+void log (std::string const & v) {
   std::cerr << v;
 }
 
-void log_ (char const * v) {
+void log (char const * v) {
   std::cerr << v;
 }
 
-void log_ (boost::system::error_code const & ec) {
+void log (boost::system::error_code const & ec) {
   std::cerr << ec.message();
 }
 
 template <class T, class ... Args>
 void log (T const & t, Args const & ... args) {
-  log_(t);
-  impl::log(args ...);
+  log(t);
+  log(args ...);
 }
 
 }
