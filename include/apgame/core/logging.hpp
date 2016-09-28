@@ -54,6 +54,11 @@ void log_ (char const * v) {
   std::cerr << v;
 }
 
+template <std::size_t N>
+void log_ (char const (&v)[N]) {
+  std::cout << v;
+}
+
 void log_ (boost::system::error_code const & ec) {
   std::cerr << ec.message();
 }
