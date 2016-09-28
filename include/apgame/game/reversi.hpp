@@ -246,8 +246,11 @@ private:
       x1 += kx;
       y1 += ky;
 
-     int j = 2;
+      int j = 2;
       while (0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8) {
+        if (board_[x1 + 8 * y1] == reversi_stone::EMPTY) {
+          break;
+        }
         if (board_[x1 + 8 * y1] == my) {
           for (int l = 0; l < j; ++l) {
             int x2 = x + l * kx;

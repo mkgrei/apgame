@@ -48,6 +48,7 @@ struct socket {
   template <class T>
   bool async_send_data (T const & data, std::size_t size, boost::asio::yield_context & yield) noexcept {
     boost::system::error_code error;
+    LOG_DEBUG("send ", size, " bytes");
     boost::asio::async_write(
       socket_,
       boost::asio::buffer(&data, size),
@@ -65,6 +66,7 @@ struct socket {
   template <class T>
   bool async_recieve_data (T & data, std::size_t size, boost::asio::yield_context & yield) noexcept {
     boost::system::error_code error;
+    LOG_DEBUG("recieve ", size, " bytes");
     boost::asio::async_read(
       socket_,
       boost::asio::buffer(&data, size),

@@ -61,7 +61,7 @@ void log_ (boost::system::error_code const & ec) {
 template <class T, class ... Args>
 void log (T const & t, Args const & ... args) {
   log_(t);
-  log(args ...);
+  impl::log(args ...);
 }
 
 }
