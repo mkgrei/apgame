@@ -55,7 +55,7 @@ void log_ (char const * v) {
 }
 
 template <std::size_t N>
-void log_ (char const (&v)[N]) {
+void log_ (char (&v)[N]) {
   std::cout << v;
 }
 
