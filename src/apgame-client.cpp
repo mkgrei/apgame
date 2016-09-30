@@ -1,5 +1,6 @@
 #include <apgame/core/context.hpp>
 #include <apgame/game/reversi_player.hpp>
+#include <lh-ai/ai.hpp>
 
 #include <boost/program_options.hpp>
 
@@ -10,21 +11,23 @@
 #include <random>
 
 struct myplayer {
+  AI* smart_ai = new RandomAI();
+  bool is_first_time = true;
   void operator() (bool is_black, std::array<apgame::reversi_stone, 64> const & board, int & x, int & y) {
-    static int X = 0;
-    static int Y = 0;
-
-    ++X;
-    if (X == 8) {
-      ++Y;
-      X = 0;
+    if (is_black && is_first_time) {
+      is_first_time = false;
+    } else {
+      this->smart_ai->setOpponentMove(board);
     }
-    if (Y == 8) {
-      X = 0;
-      Y = 0;
+    Point p;
+    p = this->smart_ai->move();
+    while (p.x==0 && p.y==0) {
+      this->smart_ai->setOpponentMove(board);
+      p = this->smart_ai->move();
     }
-    x = X;
-    y = Y;
+    x = p.x;
+    y = p.y;
+    return;
   }
 };
 
