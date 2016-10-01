@@ -1,7 +1,6 @@
 #pragma once
 
 #include <apgame/core/socket.hpp>
-// #include <apgame/core/condition_variable.hpp>
 
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
@@ -31,9 +30,17 @@ struct context {
     return true;
   }
 
+  bool send (std::vector<char> const & data) {
+    return socket_.async_send_data(data[0], data.size(), yield_);
+  }
+
   template <class T>
   bool send (T const & data, std::size_t size) {
     return socket_.async_send_data(data, size, yield_);
+  }
+
+  bool send (char const * data, std::size_t size) {
+    return socket_.async_send_data(*data, size, yield_);
   }
 
   template <class T>
@@ -56,9 +63,28 @@ struct context {
     return true; 
   }
 
+  bool recieve (std::vector<char> & data, std::size_t max) {
+    std::size_t size;
+    if (!socket_.async_recieve_data(size, yield_)) {
+      return false;
+    }
+    if (size > max) {
+      return false;
+    }
+    data.resize(size);
+    if (!socket_.async_recieve_data(data[0], size, yield_)) {
+      return false;
+    }
+    return true; 
+  }
+
   template <class T>
   bool recieve (T & data, std::size_t size) {
     return socket_.async_recieve_data(data, size, yield_);
+  }
+
+  bool recieve (char * data, std::size_t size) {
+    return socket_.async_recieve_data(*data, size, yield_);
   }
 
   void close () {

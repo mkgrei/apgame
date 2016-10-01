@@ -7,7 +7,9 @@ enum game_id : int {
 };
 
 enum game_command : int {
-  GAME_COMMAND_JOIN_GAME
+  GAME_COMMAND_CREATE_ROOM,
+  GAME_COMMAND_JOIN_ROOM,
+  GAME_COMMAND_GET_ROOM_INFO
 };
 
 
