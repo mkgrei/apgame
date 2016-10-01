@@ -17,6 +17,7 @@ int scene_create_room (apgame::game_client & client);
 
 void print_room_info ();
 void clear_screen ();
+void clear_input_buffer ();
 
 enum scene_index {
   SCENE_MAIN,
@@ -33,7 +34,7 @@ int main (int argc, char ** argv) {
     ("port", value<int>()->default_value(12345), "server port")
     ("host", value<std::string>(), "server host")
   ;
- 
+
   variables_map vm;
   store(parse_command_line(argc, argv, opt_desc), vm);
   notify(vm);
@@ -85,10 +86,13 @@ void loop (apgame::game_client & client) {
     switch (scene) {
     case SCENE_MAIN:
       scene = scene_main(client);
+      break;
     case SCENE_CREATE_ROOM:
       scene = scene_create_room(client);
+      break;
     default:
       scene = SCENE_MAIN;
+      break;
     }
   }
 }
@@ -103,7 +107,13 @@ int scene_main (apgame::game_client & client) {
   std::printf("[3] quit\n");
 
   int action;
-  if (std::scanf("%d", &action) == 0) {
+  if (!std::scanf("%d", &action)) {
+    clear_input_buffer();
+    return SCENE_MAIN;
+  }
+
+  if (action < 0 || 3 < action) {
+    clear_input_buffer();
     return SCENE_MAIN;
   }
 
@@ -120,6 +130,25 @@ int scene_main (apgame::game_client & client) {
 int scene_create_room (apgame::game_client & client) {
   clear_screen();
   print_room_info();
+
+  for (int i = 0; i < apgame::GAME_ID_MAX; ++i) {
+    std::printf("[%2d] %s\n", i, apgame::game_id_str[i]);
+  }
+
+  int gid;
+  std::printf("choose game:");
+  if (!std::scanf("%d", &gid)) {
+    scene_main_message = "invalid game id";
+    clear_input_buffer();
+    return SCENE_MAIN;
+  }
+
+  if (gid < 0 || gid >= apgame::GAME_ID_MAX) {
+    scene_main_message = "invalid game id";
+    return SCENE_MAIN;
+  }
+
+  std::printf("\n");
   std::printf("room_name: ");
   std::vector<char> buffer(129);
   if (!std::scanf("%128s", const_cast<char *>(&buffer[0]))) {
@@ -133,7 +162,7 @@ int scene_create_room (apgame::game_client & client) {
   }
 
   int error;
-  if (!client.call_create_room(name, apgame::GAME_ID_REVERSI, error)) {
+  if (!client.call_create_room(name, apgame::game_id(gid), error)) {
     std::printf("communication error\n");
     std::exit(1);
   }
@@ -156,10 +185,16 @@ int scene_create_room (apgame::game_client & client) {
 void print_room_info () {
   std::printf("------------ room info ------------\n");
   for (int i = 0; i < int(room.size()); ++i) {
-    std::printf("[%-5d] %s\n", i, room[i].name.data());
+    std::printf("[%5d][%16s] %s\n", i, apgame::game_id_str[room[i].id], room[i].name.data());
   }
+  std::printf("-----------------------------------\n");
 }
 
 void clear_screen () {
   std::printf("\e[1;1H\e[2J");
+}
+
+void clear_input_buffer () {
+  char c;
+  while ((c = std::getchar()) != '\n') {}
 }
