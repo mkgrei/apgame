@@ -75,29 +75,27 @@ struct game_client {
   bool call_join_room (game_id id, std::string const & name) {
     LOG_DEBUG("join_room game_id = ", id, ", name = ", name.data());
     if (!ctx_->send(GAME_COMMAND_JOIN_ROOM)) {
-      LOG_ERROR("fail to send command\n");
+      LOG_ERROR("fail to send command");
       return false;
     }
     if (!ctx_->send(id)) {
-      LOG_ERROR("fail to send game id\n");
+      LOG_ERROR("fail to send game id");
       return false;
     }
     if (!ctx_->send(name)) {
-      LOG_ERROR("fail to send game name\n");
+      LOG_ERROR("fail to send game name");
       return false;
     }
 
-    bool status;
-    if (!ctx_->recieve(status)) {
-      LOG_INFO("join_room ... fail\n");
+    int error;
+    if (!ctx_->recieve(error)) {
+      LOG_ERROR("failed to recieve error");
       return false;
     }
-    if (!status) {
-      LOG_INFO("join_room ... fail\n");
+    if (error != 0) {
+      LOG_INFO("failed to join, error = ", error);
       return false;
     }
-
-    LOG_INFO("join_room ... ok\n");
 
     return true;
   }

@@ -162,7 +162,6 @@ private:
       return false;
     }
     LOG_DEBUG("recieve room_name = ", room_name);
-
     auto it = room_.find(room_name);
 
     if (it == room_.end()) {

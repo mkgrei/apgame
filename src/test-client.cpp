@@ -154,7 +154,7 @@ int scene_create_room (apgame::game_client & client) {
 
   std::printf("\n");
   std::printf("room_name: ");
-  std::vector<char> buffer(129);
+  std::vector<char> buffer(129, '\0');
   if (!std::scanf("%128s", const_cast<char *>(&buffer[0]))) {
     return SCENE_MAIN;
   }
@@ -209,6 +209,7 @@ int scene_join_room (apgame::game_client & client) {
     return SCENE_MAIN;
   }
 
+  scene_main_message = "joined!";
   return SCENE_MAIN;
 }
 
