@@ -9,6 +9,7 @@
 #include <random>
 #include <lh-ai/gameboard.hpp>
 #include <lh-ai/gamebasics.hpp>
+#include <lh-ai/evaluator.hpp>
 
 struct Move : public Point {
   int eval;
@@ -44,7 +45,7 @@ class AI {
       this->ai_board.move(p);
     };
 
-    void setOpponentMove(std::array<apgame::reversi_stone, 64> const &board) {
+    void setOpponentMove(std::array<char, 64> const &board) {
       const std::vector<Point>& movables = this->ai_board.getMovablePos();
       Point p;
       for (unsigned i=0; i<movables.size(); i++) {
@@ -59,6 +60,16 @@ class AI {
     
     virtual Point move() = 0;
   private:
+};
+
+class AlphaBetaAI : public AI {
+  public:
+    AlphaBetaAI() : AI() {};
+    Point move();
+  private:
+    Evaluator* Eval;
+    void sort(Board& board, std::vector<Point>&, int limit);
+    int alphabeta(Board& board, int limit, int alpha, int beta);
 };
 
 class RandomAI : public AI {

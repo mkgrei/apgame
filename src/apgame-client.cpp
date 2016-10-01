@@ -14,15 +14,20 @@ struct myplayer {
   AI* smart_ai = new RandomAI();
   bool is_first_time = true;
   void operator() (bool is_black, std::array<apgame::reversi_stone, 64> const & board, int & x, int & y) {
+    std::array<char, 64> char_board;
+    for (unsigned i=0; i<board.size(); i++) {
+      if (board[i]==0) char_board[i]=0;
+      else char_board[i]=1;
+    }
     if (is_black && is_first_time) {
       is_first_time = false;
     } else {
-      this->smart_ai->setOpponentMove(board);
+      this->smart_ai->setOpponentMove(char_board);
     }
     Point p;
     p = this->smart_ai->move();
     while (p.x==0 && p.y==0) {
-      this->smart_ai->setOpponentMove(board);
+      this->smart_ai->setOpponentMove(char_board);
       p = this->smart_ai->move();
     }
     x = p.x;
