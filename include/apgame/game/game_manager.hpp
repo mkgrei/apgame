@@ -175,12 +175,12 @@ private:
     }
 
     if (it->second->get_game_id() != id) {
+      LOG_ERROR("game id mismatched");
       if (!ctx_->send(2)) {
         LOG_ERROR("failed to send error");
         return false;
       }
       return true;
-
     }
 
     if (!ctx_->send(0)) {

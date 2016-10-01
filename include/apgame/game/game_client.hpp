@@ -73,7 +73,7 @@ struct game_client {
  *  error = 2: game id mismatched
 */
   bool call_join_room (game_id id, std::string const & name) {
-    LOG_DEBUG("join_room game_id = ", id, "name = ", name.data());
+    LOG_DEBUG("join_room game_id = ", id, ", name = ", name.data());
     if (!ctx_->send(GAME_COMMAND_JOIN_ROOM)) {
       LOG_ERROR("fail to send command\n");
       return false;
