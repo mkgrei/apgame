@@ -92,9 +92,18 @@ private:
     game_id gid;
     if (!ctx_->recieve(gid)) {
       LOG_ERROR("failed to recieve game_id");
-      return false;
     }
-    LOG_DEBUG("game_id = ", gid);
+
+    if (gid < 0 || GAME_ID_MAX <= gid) {
+      LOG_DEBUG("unknown game_id = ", gid);
+      if (!ctx_->send(2)) {
+        LOG_ERROR("failed to return status");
+        return false;
+      }
+      return true;
+    }
+
+    LOG_DEBUG("game_id = ", game_id_str[gid]);
 
     std::unique_ptr<game> g;
     switch (gid) {
@@ -102,11 +111,8 @@ private:
       g.reset(new reversi(std::move(room_name)));
       break;
     default:
-      LOG_DEBUG("unknown gameid = ", gid);
-      if (!ctx_->send(2)) { goto protocol_error; }
-      return true;
-    protocol_error:
-      LOG_ERROR("failed to return status\n");
+      // this branch is NEVER reached
+      LOG_FATAL("paranoia test failed");
       return false;
     }
 
