@@ -50,9 +50,9 @@ private:
     case GAME_COMMAND_CREATE_ROOM:
       if (!handle_carete_game()) { goto protocol_error; }
       break;
-//       case GAME_COMMAND_JOIN_GAME:
-//         if (!handle_join_game()) { goto protocol_error; }
-//         break;
+    case GAME_COMMAND_JOIN_ROOM:
+        if (!handle_join_room()) { goto protocol_error; }
+        break;
     case GAME_COMMAND_GET_ROOM_INFO:
       if (!handle_get_room_info()) { goto protocol_error; }
       break;
@@ -138,16 +138,24 @@ private:
  *  @details
  *
  *  recieve:
- *  [std::string room_name]
+ *  [game_id id][std::string room_name]
  *
  *  send:
  *  [int error]
  *
  *  error = 0: success
  *  error = 1: room_name not found
+ *  error = 2: game id mismatched
  */
-  bool handle_join_game () {
-    LOG_DEBUG("handle_join_game");
+  bool handle_join_room () {
+    LOG_DEBUG("handle_join_room");
+    game_id id;
+    if (!ctx_->recieve(id)) {
+      LOG_ERROR("failed to recieve id");
+      return false;
+    }
+    LOG_DEBUG("recieve id = ", id);
+
     std::string room_name;
     if (!ctx_->recieve(room_name, 128)) {
       LOG_ERROR("failed to recieve room_name");
@@ -155,19 +163,32 @@ private:
     }
     LOG_DEBUG("recieve room_name = ", room_name);
 
-    if (room_.count(room_name) == 0) {
+    auto it = room_.find(room_name);
+
+    if (it == room_.end()) {
       LOG_ERROR("room not found");
       if (!ctx_->send(1)) {
         LOG_ERROR("failed to send error");
+        return false;
       }
       return true;
-    } 
+    }
+
+    if (it->second->get_game_id() != id) {
+      if (!ctx_->send(2)) {
+        LOG_ERROR("failed to send error");
+        return false;
+      }
+      return true;
+
+    }
+
     if (!ctx_->send(0)) {
       LOG_ERROR("failed to send error");
       return false;
     }
 
-    // call game api
+    return true;
   }
 
 /**

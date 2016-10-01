@@ -6,13 +6,13 @@
 
 #include <apgame/game/game_enum.hpp>
 
-#include <vector>
+#include <string>
 
 namespace apgame {
 
 struct room_info {
-  std::vector<char> name;
   game_id id;
+  std::string name;
 };
 
 struct game_client {
@@ -59,36 +59,48 @@ struct game_client {
     }
     return true;
   }
+/**↲
+ *  @details↲
+ *↲
+ *  send:↲
+ *  [game_id id][std::string room_name]↲
+ *↲
+ *  recieve:↲
+ *  [int error]↲
+ *↲
+ *  error = 0: success↲
+ *  error = 1: room_name not found↲
+ *  error = 2: game id mismatched
+*/
+  bool call_join_room (game_id id, std::string const & name) {
+    LOG_DEBUG("join_room game_id = ", id, "name = ", name.data());
+    if (!ctx_->send(GAME_COMMAND_JOIN_ROOM)) {
+      LOG_ERROR("fail to send command\n");
+      return false;
+    }
+    if (!ctx_->send(id)) {
+      LOG_ERROR("fail to send game id\n");
+      return false;
+    }
+    if (!ctx_->send(name)) {
+      LOG_ERROR("fail to send game name\n");
+      return false;
+    }
 
-//   bool call_join_game (game_id id, std::string const & name) {
-//     LOG_DEBUG("join_game game_id = ", id, "name = ", name.data());
-//     if (!ctx_->send(GAME_COMMAND_JOIN_GAME)) {
-//       LOG_ERROR("fail to send command\n");
-//       return false;
-//     }
-//     if (!ctx_->send(id)) {
-//       LOG_ERROR("fail to send game id\n");
-//       return false;
-//     }
-//     if (!ctx_->send(name)) {
-//       LOG_ERROR("fail to send game name\n");
-//       return false;
-//     }
-//
-//     bool status;
-//     if (!ctx_->recieve(status)) {
-//       LOG_INFO("join_game ... fail\n");
-//       return false;
-//     }
-//     if (!status) {
-//       LOG_INFO("join_game ... fail\n");
-//       return false;
-//     }
-//
-//     LOG_INFO("join_game ... ok\n");
-//
-//     return true;
-//   }
+    bool status;
+    if (!ctx_->recieve(status)) {
+      LOG_INFO("join_room ... fail\n");
+      return false;
+    }
+    if (!status) {
+      LOG_INFO("join_room ... fail\n");
+      return false;
+    }
+
+    LOG_INFO("join_room ... ok\n");
+
+    return true;
+  }
 
 /**
  *  @details

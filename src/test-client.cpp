@@ -14,6 +14,7 @@ int main (int argc, char ** argv);
 void loop (apgame::game_client & client);
 int scene_main (apgame::game_client & client);
 int scene_create_room (apgame::game_client & client);
+int scene_join_room (apgame::game_client & client);
 
 void print_room_info ();
 void clear_screen ();
@@ -90,6 +91,9 @@ void loop (apgame::game_client & client) {
     case SCENE_CREATE_ROOM:
       scene = scene_create_room(client);
       break;
+    case SCENE_JOIN_ROOM:
+      scene = scene_join_room(client);
+      break;
     default:
       scene = SCENE_MAIN;
       break;
@@ -154,6 +158,7 @@ int scene_create_room (apgame::game_client & client) {
   if (!std::scanf("%128s", const_cast<char *>(&buffer[0]))) {
     return SCENE_MAIN;
   }
+
   buffer.back() = '\0';
   std::string name(buffer.data());
   if (name.size() == 128) {
@@ -179,6 +184,31 @@ int scene_create_room (apgame::game_client & client) {
   default:
     break;
   }
+  return SCENE_MAIN;
+}
+
+int scene_join_room (apgame::game_client & client) {
+  clear_screen();
+  print_room_info();
+
+  int roomid;
+  std::printf("choose room:");
+  if (!std::scanf("%d", &roomid)) {
+    scene_main_message = "invalid room id";
+    clear_input_buffer();
+    return SCENE_MAIN;
+  }
+
+  if (roomid < 0 || int(room.size()) <= roomid) {
+    scene_main_message = "invalid room id";
+    return SCENE_MAIN;
+  }
+
+  if (!client.call_join_room(room[roomid].id, room[roomid].name)) {
+    scene_main_message = "failed to join room";
+    return SCENE_MAIN;
+  }
+
   return SCENE_MAIN;
 }
 
