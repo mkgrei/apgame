@@ -56,7 +56,7 @@ struct context {
     if (size > max) {
       return false;
     }
-    data.resize(size);
+    data.resize(size + 1);
     if (!socket_.async_recieve_data(data[0], size, yield_)) {
       return false;
     }
