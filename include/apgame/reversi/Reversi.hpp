@@ -1,8 +1,8 @@
 #pragma once
 
-#include <apgame/game/game.hpp>
-#include <apgame/game/game_enum.hpp>
-#include <apgame/game/reversi_enum.hpp>
+#include <apgame/game/Game.hpp>
+#include <apgame/game/enum.hpp>
+#include <apgame/reversi/enum.hpp>
 
 #include <atomic>
 #include <ctime>
@@ -12,10 +12,10 @@
 
 namespace apgame {
 
-struct reversi : public game {
+struct Reversi : public Game {
 
-  reversi (std::string && room_name)
-  : game(std::move(room_name)) {
+  Reversi (std::string room_name)
+  : Game(std::move(room_name)) {
 //     std::random_device device;
 //     random_engine_.seed(device());
 //     status_ = REVERSI_STATUS_BEFORE_GAME;
@@ -23,24 +23,23 @@ struct reversi : public game {
 //     player_white_ = 0;
   }
 
-  game_id get_game_id () const noexcept override {
+  GameID gameID () const noexcept override {
     return GAME_ID_REVERSI;
   }
 
-  char const * get_game_name () const noexcept override {
+  char const * gameName () const noexcept override {
     return "reversi";
   }
 
-// /**
-//  *  @details
-//  *  if token == 0, new token is published.
-//  *  if token != 0, user specified token is used.
-//  *
-//  *  In success, token is non-zero integer.
-//  */
-//   bool api_add_user (unsigned int & token) {
+/**
+ *  @details
+ *
+ *  In success, token is non-zero integer.
+ */
+//   bool apiJoin (unsigned int & token) {
+//     LOG_DEBUG("apiJoin");
 //     std::lock_guard<std::mutex> lock(mtx_);
-//     LOG_DEBUG("add_user: token = %u\n", token);
+//
 //     for (int i = 0; i < 16; ++i) {
 //       unsigned int tok = random_engine_();
 //       if (userset_.count(tok) == 0) {

@@ -1,26 +1,25 @@
 #pragma once
 
-#include <apgame/core/client.hpp>
-#include <apgame/core/context.hpp>
-#include <apgame/core/logging.hpp>
+#include <apgame/game/enum.hpp>
 
-#include <apgame/game/game_enum.hpp>
+#include <apgame/core/logging.hpp>
+#include <apgame/socket/SocketContext.hpp>
 
 #include <string>
 
 namespace apgame {
 
-struct room_info {
-  game_id id;
+struct RoomInfo {
+  GameID id;
   std::string name;
 };
 
-struct game_client {
+struct GameClient {
 
-  game_client () {
+  GameClient () {
   }
 
-  void init (context & ctx) {
+  void init (SocketContext & ctx) {
     ctx_ = &ctx;
   }
 
@@ -28,7 +27,7 @@ struct game_client {
  *  @details
  *
  *  send:
- *  [vector<char> room_name][int game_id]
+ *  [std::string room_name][int game_id]
  *
  *  recieve:
  *  [int error]
@@ -37,7 +36,7 @@ struct game_client {
  *  error = 1: specified room name is used
  *  error = 2: unknown game_id
  */  
-  bool call_create_room (std::string const & room_name, game_id id, int & error) {
+  bool callCreateRoom (std::string const & room_name, GameID id, int & error) {
     LOG_DEBUG("call_create_room");
 
    if (!ctx_->send(GAME_COMMAND_CREATE_ROOM)) {
@@ -63,7 +62,7 @@ struct game_client {
  *  @details↲
  *↲
  *  send:↲
- *  [game_id id][std::string room_name]↲
+ *  [GameID id][std::string room_name]↲
  *↲
  *  recieve:↲
  *  [int error]↲
@@ -72,18 +71,18 @@ struct game_client {
  *  error = 1: room_name not found↲
  *  error = 2: game id mismatched
 */
-  bool call_join_room (game_id id, std::string const & name) {
-    LOG_DEBUG("join_room game_id = ", id, ", name = ", name.data());
+  bool callJoinRoom (GameID id, std::string const & room_name) {
+    LOG_DEBUG("callJoinRoom id = ", id, ", name = ", room_name.data());
     if (!ctx_->send(GAME_COMMAND_JOIN_ROOM)) {
       LOG_ERROR("fail to send command");
       return false;
     }
     if (!ctx_->send(id)) {
-      LOG_ERROR("fail to send game id");
+      LOG_ERROR("fail to send id");
       return false;
     }
-    if (!ctx_->send(name)) {
-      LOG_ERROR("fail to send game name");
+    if (!ctx_->send(room_name)) {
+      LOG_ERROR("fail to send room_name");
       return false;
     }
 
@@ -104,10 +103,10 @@ struct game_client {
  *  @details
  *
  *  recieve:
- *  [int num_room]([std::vector<char> room_name][int game_id] * num_room)
+ *  [int num_room]([std::string room_name][GameID id] * num_room)
  */
-  bool call_get_room_info (std::vector<room_info> & room) {
-    LOG_DEBUG("call_get_room_info");
+  bool callGetRoomInfo (std::vector<RoomInfo> & room) {
+    LOG_DEBUG("callGetRoomInfo");
 
     if (!ctx_->send(GAME_COMMAND_GET_ROOM_INFO)) {
       LOG_ERROR("failed to send command");
@@ -135,7 +134,7 @@ struct game_client {
     return true;
   }
 protected:
-  context * ctx_;
+  SocketContext * ctx_;
 };
 
 }

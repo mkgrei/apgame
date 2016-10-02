@@ -1,5 +1,5 @@
-#include <apgame/core/context.hpp>
-#include <apgame/game/reversi_player.hpp>
+#include <apgame/game/ReversiPlayer.hpp>
+#include <apgame/socket/SocketContext.hpp>
 
 #include <boost/program_options.hpp>
 
@@ -29,8 +29,9 @@ struct myplayer {
 };
 
 int main (int argc, char ** argv) {
-  using namespace boost::program_options;
 
+  using namespace boost::program_options;
+  using namespace apgame;
   options_description opt_desc("apgame-client");
   opt_desc.add_options()
     ("help,h", "show help.")
@@ -57,12 +58,12 @@ int main (int argc, char ** argv) {
     return 1;
   }
 
-  apgame::client_option client_option;
+  ClientOption client_option;
 
   client_option.remote_port(vm["port"].as<int>());
   client_option.remote_address(vm["host"].as<std::string>());
 
-  apgame::reversi_player player(client_option, "mygame");
+  ReversiPlayer player(client_option, "mygame");
   player.run(myplayer());
   return 0;
 }

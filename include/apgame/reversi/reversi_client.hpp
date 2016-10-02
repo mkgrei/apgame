@@ -4,8 +4,6 @@
 #include <apgame/core/context.hpp>
 #include <apgame/core/logging.hpp>
 
-#include <apgame/game/game_enum.hpp>
-#include <apgame/game/game_client.hpp>
 // #include <apgame/game/reversi.hpp>
 #include <apgame/game/reversi_enum.hpp>
 #include <apgame/game/reversi_api.hpp>
@@ -14,9 +12,13 @@
 
 namespace apgame {
 
-struct reversi_client : public game_client {
+struct reversi_client {
 
   reversi_client () = default;
+
+  void init (context & ctx) {
+    ctx_ = &ctx;
+  }
 
   bool call_add_user (unsigned int & token) {
     LOG_DEBUG("call_add_user ... token = %08x\n", token);
@@ -117,6 +119,8 @@ struct reversi_client : public game_client {
     LOG_DEBUG("command ... ok\n");
     return true;
   }
+private:
+  context * ctx_;
 };
 
 }

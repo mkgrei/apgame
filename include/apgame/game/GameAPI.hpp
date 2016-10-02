@@ -1,6 +1,6 @@
 #pragma once
 
-#include <apgame/core/context.hpp>
+#include <apgame/socket/SocketContext.hpp>
 
 #include <atomic>
 #include <mutex>
