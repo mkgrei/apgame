@@ -9,25 +9,35 @@ namespace apgame {
 
 struct User {
 
-  User (std::size_t uid, std::string name)
-  : name_(std::move(name)) {
+  User () {
+  }
+
+  User (User const & user)
+  : name_(user.name_) {
   }
 
   User (User && user)
-  : uid_(user.uid_)
-  , name_(std::move(user.name_)) {
-  }
-
-  std::size_t uid () const noexcept {
-    return uid_;
+  : name_(std::move(user.name_)) {
   }
 
   std::string const & name () const noexcept {
     return name_;
   }
 
+  User & name (std::string name) {
+    name_ = std::move(name);
+    return *this;
+  }
+
+  bool operator== (User const & other) const noexcept {
+    return name_ == other.name_;
+  }
+
+  bool operator!= (User const & other) const noexcept {
+    return !(*this == other);
+  }
+
 private:
-  std::size_t uid_;
   std::string name_;
 };
 
@@ -39,7 +49,7 @@ template <>
 struct hash<apgame::User> {
 
   std::size_t operator() (apgame::User const & user) const noexcept {
-    return hash<std::size_t>()(user.uid());
+    return hash<std::string>()(user.name());
   }
 };
 

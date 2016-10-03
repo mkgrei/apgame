@@ -16,11 +16,34 @@ struct RoomInfo {
 
 struct GameClient {
 
-  GameClient () {
+  GameClient (SocketContext & ctx)
+  : ctx_(ctx) {
   }
 
-  void init (SocketContext & ctx) {
-    ctx_ = &ctx;
+/**
+ *  @details
+ *
+ *  recieve:
+ *  [std::string user_name]
+ *
+ *  send:
+ *  [int error]
+ *
+ *  error = 0: success
+ *  error = 1: user_name is used
+ *  error = 2: invalid user_name
+ */  
+  bool callNegotiate (std::string const & user_name, int & error) {
+    LOG_DEBUG("callNegotiate");
+    if (!ctx_.send(user_name)) {
+      LOG_ERROR("failed to send user_name");
+      return false;
+    }
+    if (!ctx_.recieve(error)) {
+      LOG_ERROR("failed to recieve error");
+      return false;
+    }
+    return true;
   }
 
 /**
@@ -37,22 +60,22 @@ struct GameClient {
  *  error = 2: unknown game_id
  */  
   bool callCreateRoom (std::string const & room_name, GameID id, int & error) {
-    LOG_DEBUG("call_create_room");
+    LOG_DEBUG("callCreateRoom");
 
-   if (!ctx_->send(GAME_COMMAND_CREATE_ROOM)) {
+   if (!ctx_.send(GAME_COMMAND_CREATE_ROOM)) {
       LOG_ERROR("failed to send command");
       return false;
     }
 
-    if (!ctx_->send(room_name)) {
+    if (!ctx_.send(room_name)) {
       LOG_ERROR("failed to send room_name");
       return false;
     }
-    if (!ctx_->send(id)) {
+    if (!ctx_.send(id)) {
       LOG_ERROR("failed to send game_id");
       return false;
     }
-    if (!ctx_->recieve(error)) {
+    if (!ctx_.recieve(error)) {
       LOG_ERROR("failed to recieve error");
       return false;
     }
@@ -71,23 +94,22 @@ struct GameClient {
  *  error = 1: room_name not found↲
  *  error = 2: game id mismatched
 */
-  bool callJoinRoom (GameID id, std::string const & room_name) {
+  bool callJoinRoom (GameID id, std::string const & room_name, int & error) {
     LOG_DEBUG("callJoinRoom id = ", id, ", name = ", room_name.data());
-    if (!ctx_->send(GAME_COMMAND_JOIN_ROOM)) {
+    if (!ctx_.send(GAME_COMMAND_JOIN_ROOM)) {
       LOG_ERROR("fail to send command");
       return false;
     }
-    if (!ctx_->send(id)) {
+    if (!ctx_.send(id)) {
       LOG_ERROR("fail to send id");
       return false;
     }
-    if (!ctx_->send(room_name)) {
+    if (!ctx_.send(room_name)) {
       LOG_ERROR("fail to send room_name");
       return false;
     }
 
-    int error;
-    if (!ctx_->recieve(error)) {
+    if (!ctx_.recieve(error)) {
       LOG_ERROR("failed to recieve error");
       return false;
     }
@@ -108,24 +130,24 @@ struct GameClient {
   bool callGetRoomInfo (std::vector<RoomInfo> & room) {
     LOG_DEBUG("callGetRoomInfo");
 
-    if (!ctx_->send(GAME_COMMAND_GET_ROOM_INFO)) {
+    if (!ctx_.send(GAME_COMMAND_GET_ROOM_INFO)) {
       LOG_ERROR("failed to send command");
       return false;
     }
 
     int num_room;
-    if (!ctx_->recieve(num_room)) {
+    if (!ctx_.recieve(num_room)) {
       LOG_ERROR("failed to recieve num_room");
       return false;
     }
     room.resize(num_room);
 
     for (int i = 0; i < num_room; ++i) {
-      if (!ctx_->recieve(room[i].name, 128)) {
+      if (!ctx_.recieve(room[i].name, 128)) {
         LOG_ERROR("failed to recieve room_name");
         return false;
       }
-      if (!ctx_->recieve(room[i].id)) {
+      if (!ctx_.recieve(room[i].id)) {
         LOG_ERROR("failed to recieve game_id");
         return false;
       }
@@ -134,7 +156,7 @@ struct GameClient {
     return true;
   }
 protected:
-  SocketContext * ctx_;
+  SocketContext & ctx_;
 };
 
 }

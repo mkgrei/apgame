@@ -2,7 +2,7 @@
 
 namespace apgame {
 
-enum reversi_status : int {
+enum ReversiStatus : int {
   REVERSI_STATUS_BEFORE_GAME,
   REVERSI_STATUS_BLACK_TURN,
   REVERSI_STATUS_WHITE_TURN,
@@ -10,19 +10,19 @@ enum reversi_status : int {
   REVERSI_STATUS_ERROR
 };
 
-enum reversi_command : int {
-  REVERSI_COMMAND_JOIN,
-  REVERSI_COMMAND_GET_GAME_STATUS,
+enum ReversiCommand : int {
+  REVERSI_COMMAND_GET_COLOR,
+  REVERSI_COMMAND_GET_STATUS,
   REVERSI_COMMAND_GET_BOARD,
   REVERSI_COMMAND_PUT_STONE,
+  REVERSI_COMMAND_GET_LAST_STONE,
   REVERSI_COMMAND_GET_USER_INFO,
-  REVERSI_COMMAND_CLOSE
 };
 
-enum reversi_stone : char {
-  EMPTY = 0,
-  BLACK,
-  WHITE
+enum ReversiStone : char {
+  REVERSI_STONE_BLACK = 1,
+  REVERSI_STONE_EMPTY = 0,
+  REVERSI_STONE_WHITE = -1
 };
 
 }

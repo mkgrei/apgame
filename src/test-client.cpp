@@ -27,13 +27,35 @@ struct Scene {
   std::vector<RoomInfo> room;
   int scene;
   std::string main_message;
+  std::string user_name;
 
-  Scene()
-  : scene(SCENE_MAIN) {
+  Scene(SocketContext & ctx)
+  : client(ctx)
+  , scene(SCENE_MAIN) {
   }
 
-  Scene & operator() (SocketContext & ctx) {
-    client.init(ctx);
+  Scene & operator() () {
+
+    int error;
+    if (!client.callNegotiate(user_name, error)) {
+      std::printf("failed to negotiate\n");
+      std::exit(1);
+    }
+
+    switch (error) {
+    case 0:
+      break;
+    case 1:
+      std::printf("user name is used\n");
+      std::exit(1);
+    case 2:
+      std::printf("invalid user name\n");
+      std::exit(1);
+    default:
+      std::printf("unknown error\n");
+      std::exit(1);
+    }
+
     while (true) {
       if (!client.callGetRoomInfo(room)) {
         std::printf("communication error\n");
@@ -171,8 +193,9 @@ struct Scene {
       scene = SCENE_MAIN;
       return;
     }
-  
-    if (!client.callJoinRoom(room[room_id].id, room[room_id].name)) {
+
+    int error;  
+    if (!client.callJoinRoom(room[room_id].id, room[room_id].name, error) || error != 0) {
       main_message = "failed to join room";
       scene = SCENE_MAIN;
       return;
@@ -199,8 +222,9 @@ struct Scene {
     char c;
     while ((c = std::getchar()) != '\n') {}
   }
-
 };
+
+
 int main (int argc, char ** argv) {
   using namespace boost::program_options;
 
@@ -208,7 +232,10 @@ int main (int argc, char ** argv) {
   opt_desc.add_options()
     ("help,h", "show help.")
     ("port", value<int>()->default_value(12345), "server port")
-    ("host", value<std::string>(), "server host")
+    ("host", value<std::string>()->required(), "server host")
+    ("user", value<std::string>()->required(), "user name")
+    ("room", value<std::string>(), "room name")
+    ("game", value<std::string>(), "game name")
   ;
 
   variables_map vm;
@@ -220,26 +247,26 @@ int main (int argc, char ** argv) {
     return 1;
   } 
 
-  if (!vm.count("port")) {
-    std::cout << "server port is not specified" << std::endl;
-    return 1;
-  }
-
-  if (!vm.count("host")) {
-    std::cout << "server host is not specified" << std::endl;
-    return 1;
-  }
-
   SocketClientOption opt;
 
   opt.remotePort(vm["port"].as<int>());
   opt.remoteAddress(vm["host"].as<std::string>());
 
-  SocketClient client(opt);
-  client.run([&] (SocketContext & ctx) {
-    Scene scene;
-    scene(ctx);
-  });
+  if (vm.count("room") || vm.count("game")) {
+    if (!vm.count("room") || !vm.count("game")) {
+      std::printf("auto mode is on. specify both --room and --game\n");
+      return 1;
+    }
+    std::printf("auto mode is not implemented\n");
+    return 1;
+  } else {
+    SocketClient client(opt);
+    client.run([&] (SocketContext & ctx) {
+      Scene scene(ctx);
+      scene.user_name = vm["user"].as<std::string>();
+      scene();
+    });
+  }
   return 0;
 }
 

@@ -34,9 +34,11 @@ struct Acceptor {
   bool accept (Socket & socket, boost::asio::yield_context & yield) {
     boost::system::error_code error;
     native_socket_.async_accept(socket.native_socket_, yield[error]);
-    if (!error) {
+    if (error) {
+      LOG_ERROR("failed to accept", error.message());
       return false;
     }
+    socket.is_connected_ = true;
     socket.reuseAddr(true);
     return true;
   }

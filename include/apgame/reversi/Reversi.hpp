@@ -3,7 +3,9 @@
 #include <apgame/game/Game.hpp>
 #include <apgame/game/enum.hpp>
 #include <apgame/reversi/enum.hpp>
+#include <apgame/reversi/ReversiContext.hpp>
 
+#include <array>
 #include <atomic>
 #include <ctime>
 #include <mutex>
@@ -16,11 +18,8 @@ struct Reversi : public Game {
 
   Reversi (std::string room_name)
   : Game(std::move(room_name)) {
-//     std::random_device device;
-//     random_engine_.seed(device());
-//     status_ = REVERSI_STATUS_BEFORE_GAME;
-//     player_black_ = 0;
-//     player_white_ = 0;
+    std::random_device device;
+    random_engine_.seed(device());
   }
 
   GameID gameID () const noexcept override {
@@ -31,258 +30,328 @@ struct Reversi : public Game {
     return "reversi";
   }
 
+  void run (GameContext & game_context) override {
+
+    ReversiContext ctx(game_context.socket_context, game_context.user);
+
+    if (!handleJoin(ctx)) {
+      return;
+    }
+
+    while (spin(ctx)) {}
+  }
+
+  bool spin (ReversiContext & ctx) {
+    LOG_DEBUG("spin");
+    ReversiCommand cmd;
+    if (!ctx.socket_context.recieve(cmd)) {
+      LOG_DEBUG("fail to recieve command");
+      return false;
+    }
+
+    switch (cmd) {
+    case REVERSI_COMMAND_GET_COLOR:
+      return handleGetColor(ctx);
+    case REVERSI_COMMAND_GET_STATUS:
+      return handleGetStatus(ctx);
+    case REVERSI_COMMAND_GET_BOARD:
+      return handleGetBoard(ctx);
+    case REVERSI_COMMAND_PUT_STONE:
+      return handlePutStone(ctx);
+    case REVERSI_COMMAND_GET_LAST_STONE:
+      return handleGetLastStone(ctx);
+    default:
+      LOG_DEBUG("unknown command ", cmd);
+      return false;
+    }
+  }
+
+/**
+ *  send:
+ *  [int error]
+ *
+ *  error = 0: success
+ *  error = 1: failed
+ */
+  bool handleJoin (ReversiContext & ctx) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    LOG_DEBUG("handleJoin");
+    if (player_name_[0].size() > 0 && player_name_[1].size() > 0) {
+      LOG_ERROR("too many users");
+      if (!ctx.socket_context.send(1)) {
+        LOG_ERROR("failed to send error");
+      }
+      return false;
+    }
+
+    int i = std::uniform_int_distribution<int>(0, 1)(random_engine_);
+    if (player_name_[i].size() > 0) {
+      i = 1 - i;
+    }
+    player_name_[i] = ctx.user.name();
+
+    if (i == 0) {
+      ctx.color = REVERSI_STONE_BLACK;
+    } else {
+      ctx.color = REVERSI_STONE_WHITE;
+    }
+ 
+    if (player_name_[0].size() > 0 && player_name_[1].size() > 0) {
+      initBoard();
+      status_ = REVERSI_STATUS_BLACK_TURN;
+    }
+
+    if (!ctx.socket_context.send(0)) {
+      LOG_ERROR("failed to send error");
+      return false;
+    }
+
+    return true;
+  }
+
+
+/**
+ * @details
+ * send:
+ * [ReversiStone color]
+ */
+  bool handleGetColor (ReversiContext & ctx) {
+    LOG_DEBUG("handleGetColor");
+    if (!ctx.socket_context.send(ctx.color)) {
+      LOG_ERROR("failed to send color");
+      return false;
+    }
+    return true;
+  }
+
+/**
+ * @details
+ * send:
+ * [ReversiStatus status]
+ */
+  bool handleGetStatus (ReversiContext & ctx) {
+    LOG_DEBUG("handleGetStatus");
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (!ctx.socket_context.send(status_)) {
+      LOG_ERROR("failed to send status");
+      return false;
+    }
+    return true;
+  }
+
 /**
  *  @details
- *
- *  In success, token is non-zero integer.
+ *  send:
+ *  [ReversiStone stone] * 64
  */
-//   bool apiJoin (unsigned int & token) {
-//     LOG_DEBUG("apiJoin");
-//     std::lock_guard<std::mutex> lock(mtx_);
-//
-//     for (int i = 0; i < 16; ++i) {
-//       unsigned int tok = random_engine_();
-//       if (userset_.count(tok) == 0) {
-//         userset_.emplace(tok, user()); 
-//         token = tok;
-//         LOG_DEBUG("add_user: ok, publish new token = %u\n", token);
-//         return true;
-//       }
-//     }
-//     LOG_ERROR("add_user: fail, hash table is too dense?\n");
-//     return false;
-//   }
-//
-// /**
-//  *  @details
-//  */
-//   bool api_make_player (unsigned int token, bool & is_black) {
-//     std::lock_guard<std::mutex> lock(mtx_);
-//
-//     LOG_DEBUG("make_player: token = %u\n", token);
-//     if (!check_user(token)) {
-//       LOG_ERROR("make_player: fail, unknown token = %u\n", token);
-//       return false;
-//     }
-//
-//     if (status_ != REVERSI_STATUS_BEFORE_GAME) {
-//       LOG_ERROR("make_player: fail, invalid status = %d\n", status_);
-//       return false;
-//     }
-//
-//     if (player_black_ == 0) {
-//       player_black_ = token;
-//       is_black = true;
-//       userset_[token].is_black = true;
-//     } else if (player_white_ == 0) {
-//       player_white_ = token;
-//       is_black = false;
-//       userset_[token].is_white = true;
-//     } else {
-//       LOG_ERROR("make_player: fail, there are already two players\n");
-//       return false;
-//     }
-//
-//     if (player_black_ == 0 || player_white_ == 0) {
-//       LOG_DEBUG("make_player: ok, is_black = %s\n", is_black ? "true" : "false");
-//       return true;
-//     }
-//
-//     init_board();
-//     status_ = REVERSI_STATUS_BLACK_TURN;
-//     LOG_DEBUG("make_player: ok, is_black = %s\n", is_black ? "true" : "false");
-//     LOG_INFO("game started\n");
-//     return true;
-//   }
-//
-//   bool api_get_game_status (reversi_status & status) const noexcept {
-//     std::lock_guard<std::mutex> lock(mtx_);
-//     LOG_DEBUG("get_game_status: status = %d\n", status);
-//     status = status_;
-//     LOG_DEBUG("get_game_status: ok, status = %d\n", status);
-//     return true;
-//   }
-//
-//   bool api_get_board (std::array<reversi_stone, 64> & board) const noexcept {
-//     LOG_DEBUG("get_board:\n");
-//     std::lock_guard<std::mutex> lock(mtx_);
-//     board = board_;
-//     LOG_DEBUG("get_board: ok\n");
-//     return true;
-//   }
-//
-//   bool api_put_stone (unsigned int token, int x, int y) {
-//     std::lock_guard<std::mutex> lock(mtx_);
-//     LOG_DEBUG("put_stone: token = %u, x = %d, y = %d\n", token, x, y);
-//
-//     bool is_black = (player_black_ == token ? true : false);
-//     bool is_white = (player_white_ == token ? true : false);
-//
-//     if (!is_black && !is_white) {
-//       return false;
-//     }
-//
-//     LOG_DEBUG("put_stone: player is %s\n", is_black ? "black" : "false");
-//
-//     if (is_black && status_ != REVERSI_STATUS_BLACK_TURN) {
-//       LOG_ERROR("put_stone: fail, invalid turn = %d\n", status_);
-//       return false;
-//     }
-//     if (is_white && status_ != REVERSI_STATUS_WHITE_TURN) {
-//       LOG_ERROR("put_stone: fail, invalid turn = %d\n", status_);
-//       return false;
-//     }
-//
-//     if (!check_put_stone(is_black, x, y)) {
-//       LOG_ERROR("put_stone: fail, invalid put\n");
-//       return false;
-//     }
-//     LOG_DEBUG("put_stone: ok\n");
-//     status_ = is_black ? REVERSI_STATUS_WHITE_TURN : REVERSI_STATUS_BLACK_TURN;
-//     return true;
-//   }
-//
-//   bool api_close (int token) {
-//     LOG_DEBUG("api_close: token = %u\n", token);
-//     std::lock_guard<std::mutex> lock(mtx_);
-//     if (!check_user(token)) {
-//       LOG_DEBUG("api_close: fail, unknown user\n", token);
-//       return false;
-//     }
-//     auto & user = userset_[token];
-//     if (!user.is_black && !user.is_white) {
-//       userset_.erase(token);
-//     } else if (user.is_black && status_ == REVERSI_STATUS_BEFORE_GAME) {
-//       player_black_ = 0;
-//       userset_.erase(token);
-//     } else if (user.is_white && status_ == REVERSI_STATUS_BEFORE_GAME) {
-//       player_white_ = 0;
-//       userset_.erase(token);
-//     }
-//
-//     LOG_DEBUG("api_close: ok\n");
-//     return true;
-//   }
-//
-// private:
-//
-//   struct user {
-//
-//     user () noexcept {
-//       last_comm_timestamp = std::time(NULL);
-//       is_white = false;
-//       is_black = false;
-//     }
-//
-//     bool is_black;
-//     bool is_white;
-//     std::time_t last_comm_timestamp;
-//   };
-//
-//   std::mt19937_64 random_engine_;
-//
-//   mutable std::mutex mtx_;
-//   std::unordered_map<unsigned int, user> userset_;
-//   unsigned int player_black_;
-//   unsigned int player_white_;
-//
-//   std::array<reversi_stone, 64> board_;
-//   reversi_status status_;
-//
-//   bool check_user (unsigned int token) {
-//     return userset_.count(token) > 0;
-//   }
-//
-//   void init_board() {
-//     for (reversi_stone & stone : board_) {
-//       stone = reversi_stone::EMPTY;
-//     }
-//     board_[3 + 8 * 3] = reversi_stone::WHITE;
-//     board_[4 + 8 * 4] = reversi_stone::WHITE;
-//     board_[3 + 8 * 4] = reversi_stone::BLACK;
-//     board_[4 + 8 * 3] = reversi_stone::BLACK;
-//   }
-//
-//   bool check_put_stone (bool is_black, int x, int y) {
-//     if (!(0 <= x && x < 8)) {
-//       return false;
-//     }
-//     if (!(0 <= y && y < 8)) {
-//       return false;
-//     }
-//     if (board_[x + 8 * y] != reversi_stone::EMPTY) {
-//       return false;
-//     }
-//
-//     std::array<int, 16> K{
-//       1, 0,
-//       1, 1,
-//       0, 1,
-//       -1, 1,
-//       -1, 0,
-//       -1, -1,
-//       0, -1,
-//       1, -1
-//     };
-//
-//     reversi_stone my = is_black ? reversi_stone::BLACK : reversi_stone::WHITE;
-//     reversi_stone other = is_black ? reversi_stone::WHITE : reversi_stone::BLACK;
-//
-//     auto board = board_;
-//
-//     bool flag = false;
-//     for (int i = 0; i < 8; ++i) {
-//       int kx = K[2 * i];
-//       int ky = K[2 * i + 1];
-//       int x1 = x + kx;
-//       int y1 = y + ky;
-//
-//       if (!(0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8)) {
-//         continue;
-//       }
-//       if (board[x1 + 8 * y1] != other) {
-//         continue;
-//       }
-//       x1 += kx;
-//       y1 += ky;
-//
-//       int j = 2;
-//       while (0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8) {
-//         if (board_[x1 + 8 * y1] == reversi_stone::EMPTY) {
-//           break;
-//         }
-//         if (board_[x1 + 8 * y1] == my) {
-//           for (int l = 0; l < j; ++l) {
-//             int x2 = x + l * kx;
-//             int y2 = y + l * ky;
-//             board[x2 + 8 * y2] = my;
-//           }
-//           flag = true;
-//           break;
-//         }
-//         ++j;
-//         x1 += kx;
-//         y1 += ky;
-//       }
-//     }
-//     if (flag) {
-//       board_ = board;
-//       print_board();
-//     }
-//     return flag;
-//   }
-//
-//   void print_board() {
+  bool handleGetBoard (ReversiContext & ctx) {
+    LOG_DEBUG("handleGetBoard");
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (!ctx.socket_context.send(board_)) {
+      LOG_ERROR("failed to send board");
+      return false;
+    }
+    return true;
+  }
+
+/**
+ *  @details
+ *  recieve:
+ *  [int x][int y]
+ *
+ *  send:
+ *  [int error]
+ *
+ *  error = 0: success
+ *  error = 1: invalid turn
+ *  error = 2: invalid put
+ */
+  bool handlePutStone (ReversiContext & ctx) {
+    LOG_DEBUG("handlePutStone");
+    std::lock_guard<std::mutex> lock(mtx_);
+    int x, y;
+
+
+    if (!ctx.socket_context.recieve(x)) {
+      LOG_ERROR("failed to recieve x");
+      return false;
+    }
+
+    if (!ctx.socket_context.recieve(y)) {
+      LOG_ERROR("failed to recieve y");
+      return false;
+    }
+
+    if (ctx.color == REVERSI_STONE_BLACK && status_ != REVERSI_STATUS_BLACK_TURN) {
+      LOG_ERROR("failed, invalid turn");
+      if (!ctx.socket_context.send(1)) {
+        LOG_ERROR("failed to send error");
+        return false;
+      }
+      return true;
+    }
+    if (ctx.color == REVERSI_STONE_WHITE && status_ != REVERSI_STATUS_WHITE_TURN) {
+      if (!ctx.socket_context.send(1)) {
+        LOG_ERROR("failed to send error");
+        return false;
+      }
+      return true;
+    }
+
+    if (!checkPutStone(ctx.color, x, y)) {
+      LOG_ERROR("invalid put");
+      if (!ctx.socket_context.send(2)) {
+        LOG_ERROR("failed to send error");
+        return false;
+      }
+      return true;
+    }
+
+    if (!ctx.socket_context.send(0)) {
+      LOG_ERROR("failed to send error");
+      return false;
+    }
+
+    x_ = x;
+    y_ = y;
+    status_ = (ctx.color == REVERSI_STONE_BLACK) ? REVERSI_STATUS_WHITE_TURN : REVERSI_STATUS_BLACK_TURN;
+    return true;
+  }
+
+/**
+ *  @details
+ *  send:
+ *  [int x][int y]
+ *
+  */
+  bool handleGetLastStone (ReversiContext & ctx) {
+    LOG_DEBUG("handleGetLastStone");
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (!ctx.socket_context.send(x_)) {
+      LOG_ERROR("failed to send x");
+      return false;
+    }
+    if (!ctx.socket_context.send(y_)) {
+      LOG_ERROR("failed to send y");
+      return false;
+    }
+    return true;
+  }
+
+private:
+
+  mutable std::mutex mtx_;
+  std::mt19937 random_engine_;
+
+  std::array<std::string, 2> player_name_;
+  std::array<ReversiStone, 64> board_;
+  ReversiStatus status_;
+  int x_;
+  int y_;
+
+  void initBoard () {
+    for (ReversiStone & stone : board_) {
+      stone = REVERSI_STONE_EMPTY;
+    }
+
+    board_[3 + 8 * 3] = REVERSI_STONE_WHITE;
+    board_[4 + 8 * 4] = REVERSI_STONE_WHITE;
+    board_[3 + 8 * 4] = REVERSI_STONE_BLACK;
+    board_[4 + 8 * 3] = REVERSI_STONE_BLACK;
+
+    x_ = -1;
+    y_ = -1;
+  }
+
+  bool checkPutStone (int color, int x, int y) {
+    if (color != REVERSI_STONE_BLACK && color != REVERSI_STONE_WHITE) {
+      return false;
+    }
+    if (!(0 <= x && x < 8)) {
+      return false;
+    }
+    if (!(0 <= y && y < 8)) {
+      return false;
+    }
+
+    if (board_[x + 8 * y] != REVERSI_STONE_EMPTY) {
+      return false;
+    }
+
+    std::array<int, 16> K{
+      1, 0,
+      1, 1,
+      0, 1,
+      -1, 1,
+      -1, 0,
+      -1, -1,
+      0, -1,
+      1, -1
+    };
+
+    std::array<ReversiStone, 64> board;
+    board = board_;
+
+    ReversiStone my_stone = ReversiStone(color);
+    ReversiStone other_stone = ReversiStone(-color);
+
+    bool flag = false;
+    for (int i = 0; i < 8; ++i) {
+      int kx = K[2 * i];
+      int ky = K[2 * i + 1];
+      int x1 = x + kx;
+      int y1 = y + ky;
+
+      if (!(0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8)) {
+        continue;
+      }
+      if (board[x1 + 8 * y1] != other_stone) {
+        continue;
+      }
+      x1 += kx;
+      y1 += ky;
+
+      int j = 2;
+      while (0 <= x1 && x1 < 8 && 0 <= y1 && y1 < 8) {
+        if (board[x1 + 8 * y1] == REVERSI_STONE_EMPTY) {
+          break;
+        }
+        if (board[x1 + 8 * y1] == my_stone) {
+          for (int l = 0; l < j; ++l) {
+            int x2 = x + l * kx;
+            int y2 = y + l * ky;
+            board[x2 + 8 * y2] = my_stone;
+          }
+          flag = true;
+          break;
+        }
+        ++j;
+        x1 += kx;
+        y1 += ky;
+      }
+    }
+    if (flag) {
+      board_ = board;
+      if (color == REVERSI_STONE_BLACK) {
+        status_ = REVERSI_STATUS_WHITE_TURN;
+      } else if (color == REVERSI_STONE_WHITE) {
+        status_ = REVERSI_STATUS_BLACK_TURN;
+      }
+    }
+    return flag;
+  }
+
+//   void printBoard () {
 //     for (int y = 0; y < 8; ++y) {
 //       for (int x = 0; x < 8; ++x) {
-//         reversi_stone stone = board_[x + 8 * y];
-//         if (stone == reversi_stone::EMPTY) {
+//         ReversiStone stone = board_[x + 8 * y];
+//         if (stone == ReversiStone::EMPTY) {
 //           std::cout << '.';
 //         }
-//         if (stone == reversi_stone::WHITE) {
+//         if (stone == ReversiStone::WHITE) {
 //           std::cout << 'W';
 //         }
-//         if (stone == reversi_stone::BLACK) {
+//         if (stone == ReversiStone::BLACK) {
 //           std::cout << 'B';
 //         }
 //       }

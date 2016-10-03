@@ -82,7 +82,6 @@ struct SocketServer {
 
     } catch (std::exception & e) {
       LOG_FATAL("unknown error occured. message = ", e.what());
-
     }
   }
 
@@ -166,6 +165,7 @@ private:
   template <class Handler>
   void startAcceptLoop (Handler && handler) {
     boost::asio::spawn(io_service_, [&] (boost::asio::yield_context yield) {
+      LOG_DEBUG("start accept loop");
       while (acceptLoopOnce(handler, yield)) {
       }
     });
@@ -175,15 +175,16 @@ private:
   bool acceptLoopOnce (Handler && handler, boost::asio::yield_context & yield) {
     int i = findFreeSocket();
     if (i == -1) {
+      LOG_ERROR("failed to find free socket");
       return false;
     }
 
     Socket & socket = socket_[i];
-    LOG_INFO("accept, remote_address = ", socket.remoteAddress(), ", remote_port = ", socket.remotePort());
 
     if (!acceptor_.accept(socket, yield)) {
       return false;
     }
+    LOG_INFO("accept, remote_address = ", socket.remoteAddress(), ", remote_port = ", socket.remotePort());
 
     boost::asio::spawn(io_service_, [&] (boost::asio::yield_context yield) {
       SocketContext ctx(socket, yield);
@@ -195,7 +196,7 @@ private:
 
   int findFreeSocket () {
     for (int i = 0; i < int(socket_.size()); ++i) {
-      if (socket_[i].isConnected()) {
+      if (!socket_[i].isConnected()) {
         return i;
       }
     }
@@ -204,6 +205,7 @@ private:
 
   template <class Handler>
   void startSocketContext (Handler & handler, SocketContext & ctx) {
+    LOG_INFO("start SocketContext");
     try {
       handler(ctx);
       ctx.close();
@@ -212,6 +214,7 @@ private:
       LOG_DEBUG("message = ", e.what());
       ctx.close();
     }
+    LOG_INFO("end SocketContext");
   }
 };
 

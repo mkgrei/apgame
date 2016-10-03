@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 2.7)
 add_executable(apgame-server apgame-server.cpp)
 target_link_libraries(apgame-server boost_date_time boost_system boost_coroutine boost_context boost_program_options pthread)
 
+add_executable(reversi-player reversi-player.cpp)
+target_link_libraries(reversi-player boost_date_time boost_system boost_coroutine boost_context boost_program_options pthread)
+
 add_executable(test-client test-client.cpp)
 target_link_libraries(test-client boost_date_time boost_system boost_coroutine boost_context boost_program_options)
 
