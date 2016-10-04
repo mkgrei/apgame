@@ -42,7 +42,7 @@ struct SocketClient {
     LOG_INFO("spawn context.");
     boost::asio::spawn(io_service_,
       [&] (boost::asio::yield_context yield) {
-        SocketContext ctx(socket_, yield);
+        SocketContext ctx(socket_, io_service_, yield);
         try {
           handler(ctx);
           socket_.close();

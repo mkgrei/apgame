@@ -187,7 +187,7 @@ private:
     LOG_INFO("accept, remote_address = ", socket.remoteAddress(), ", remote_port = ", socket.remotePort());
 
     boost::asio::spawn(io_service_, [&] (boost::asio::yield_context yield) {
-      SocketContext ctx(socket, yield);
+      SocketContext ctx(socket, io_service_, yield);
       startSocketContext(handler, ctx);
     });
 

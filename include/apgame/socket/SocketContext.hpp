@@ -1,16 +1,20 @@
 #pragma once
 
 #include <apgame/socket/Socket.hpp>
+#include <apgame/socket/Lock.hpp>
 
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
+
+#include <mutex>
 
 namespace apgame {
 
 struct SocketContext {
 
-  SocketContext (Socket & socket, boost::asio::yield_context & yield)
+  SocketContext (Socket & socket, boost::asio::io_service & io_service, boost::asio::yield_context & yield)
   : socket_(socket)
+  , io_service_(io_service)
   , yield_(yield) {
   }
 
@@ -91,9 +95,14 @@ struct SocketContext {
     socket_.close();
   }
 
+  Lock lock (std::mutex & mtx) {
+    return Lock(io_service_, yield_, mtx);
+  }  
+
 protected:
   Socket & socket_;
-  boost::asio::yield_context & yield_; 
+  boost::asio::io_service & io_service_;
+  boost::asio::yield_context & yield_;
 };
 
 }

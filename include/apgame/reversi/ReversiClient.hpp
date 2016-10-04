@@ -90,15 +90,16 @@ struct ReversiClient {
 
 /**
  *  @details
- *  recieve:
+ *  send:
  *  [int x][int y]
  *
- *  send:
+ *  recieve:
  *  [int error]
  *
  *  error = 0: success
  *  error = 1: invalid turn
  *  error = 2: invalid put
+ *  error = 3: your turn is passed
  */
   bool callPutStone (int x, int y, int & error) {
     LOG_DEBUG("callPutStone x = ", x, ", y = ", y);

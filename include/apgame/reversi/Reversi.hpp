@@ -4,6 +4,7 @@
 #include <apgame/game/enum.hpp>
 #include <apgame/reversi/enum.hpp>
 #include <apgame/reversi/ReversiContext.hpp>
+#include <apgame/socket/Lock.hpp>
 
 #include <array>
 #include <atomic>
@@ -70,15 +71,24 @@ struct Reversi : public Game {
  *  send:
  *  [int error]
  *
- *  error = 0: success
- *  error = 1: failed
+ *  error = 0: success, you are new user
+ *  error = 1: success, you are rejoined
+ *  error = 2: failed, too many users
  */
   bool handleJoin (ReversiContext & ctx) {
-    std::lock_guard<std::mutex> lock(mtx_);
-    LOG_DEBUG("handleJoin");
+    LOG_DEBUG(ctx.user.name(), ":handleJoin");
+    auto lock = ctx.socket_context.lock(mtx_);
+    if (player_name_[0] == ctx.user.name() || player_name_[1] == ctx.user.name()) {
+       if (!ctx.socket_context.send(1)) {
+        LOG_ERROR("failed to send error");
+        return false;
+      }
+      return true;
+    }
+
     if (player_name_[0].size() > 0 && player_name_[1].size() > 0) {
       LOG_ERROR("too many users");
-      if (!ctx.socket_context.send(1)) {
+      if (!ctx.socket_context.send(2)) {
         LOG_ERROR("failed to send error");
       }
       return false;
@@ -98,6 +108,7 @@ struct Reversi : public Game {
  
     if (player_name_[0].size() > 0 && player_name_[1].size() > 0) {
       initBoard();
+      last_passed_ = false;
       status_ = REVERSI_STATUS_BLACK_TURN;
     }
 
@@ -116,7 +127,7 @@ struct Reversi : public Game {
  * [ReversiStone color]
  */
   bool handleGetColor (ReversiContext & ctx) {
-    LOG_DEBUG("handleGetColor");
+    LOG_DEBUG(ctx.user.name(), ":handleGetColor");
     if (!ctx.socket_context.send(ctx.color)) {
       LOG_ERROR("failed to send color");
       return false;
@@ -130,8 +141,8 @@ struct Reversi : public Game {
  * [ReversiStatus status]
  */
   bool handleGetStatus (ReversiContext & ctx) {
-    LOG_DEBUG("handleGetStatus");
-    std::lock_guard<std::mutex> lock(mtx_);
+    LOG_DEBUG(ctx.user.name(), ":handleGetStatus");
+    auto lock = ctx.socket_context.lock(mtx_);
     if (!ctx.socket_context.send(status_)) {
       LOG_ERROR("failed to send status");
       return false;
@@ -145,8 +156,8 @@ struct Reversi : public Game {
  *  [ReversiStone stone] * 64
  */
   bool handleGetBoard (ReversiContext & ctx) {
-    LOG_DEBUG("handleGetBoard");
-    std::lock_guard<std::mutex> lock(mtx_);
+    LOG_DEBUG(ctx.user.name(), ":handleGetBoard");
+    auto lock = ctx.socket_context.lock(mtx_);
     if (!ctx.socket_context.send(board_)) {
       LOG_ERROR("failed to send board");
       return false;
@@ -165,12 +176,12 @@ struct Reversi : public Game {
  *  error = 0: success
  *  error = 1: invalid turn
  *  error = 2: invalid put
+ *  error = 3: your turn is passed
  */
   bool handlePutStone (ReversiContext & ctx) {
-    LOG_DEBUG("handlePutStone");
-    std::lock_guard<std::mutex> lock(mtx_);
+    LOG_DEBUG(ctx.user.name(), ":handlePutStone");
+    auto lock = ctx.socket_context.lock(mtx_);
     int x, y;
-
 
     if (!ctx.socket_context.recieve(x)) {
       LOG_ERROR("failed to recieve x");
@@ -198,6 +209,25 @@ struct Reversi : public Game {
       return true;
     }
 
+    if (!checkPossibleChoice(ctx.color)) {
+      LOG_INFO("pass ", ctx.color == REVERSI_STONE_BLACK ? "BLACK" : "WHITE");
+      if (last_passed_) {
+        LOG_INFO("game finished");
+        status_ = REVERSI_STATUS_AFTER_GAME;
+      } else if (ctx.color == REVERSI_STONE_BLACK) {
+        status_ = REVERSI_STATUS_WHITE_TURN;
+      } else { 
+        status_ = REVERSI_STATUS_BLACK_TURN;
+      }
+      last_passed_ = true;
+      if (!ctx.socket_context.send(3)) {
+        LOG_ERROR("failed to send error");
+        return false;
+      }
+      return true;
+    }
+    last_passed_ = false;
+
     if (!checkPutStone(ctx.color, x, y)) {
       LOG_ERROR("invalid put");
       if (!ctx.socket_context.send(2)) {
@@ -214,6 +244,7 @@ struct Reversi : public Game {
 
     x_ = x;
     y_ = y;
+
     status_ = (ctx.color == REVERSI_STONE_BLACK) ? REVERSI_STATUS_WHITE_TURN : REVERSI_STATUS_BLACK_TURN;
     return true;
   }
@@ -225,8 +256,8 @@ struct Reversi : public Game {
  *
   */
   bool handleGetLastStone (ReversiContext & ctx) {
-    LOG_DEBUG("handleGetLastStone");
-    std::lock_guard<std::mutex> lock(mtx_);
+    LOG_DEBUG(ctx.user.name(), ":handleGetLastStone");
+    auto lock = ctx.socket_context.lock(mtx_);
     if (!ctx.socket_context.send(x_)) {
       LOG_ERROR("failed to send x");
       return false;
@@ -246,6 +277,8 @@ private:
   std::array<std::string, 2> player_name_;
   std::array<ReversiStone, 64> board_;
   ReversiStatus status_;
+  bool last_passed_;
+
   int x_;
   int y_;
 
@@ -261,6 +294,20 @@ private:
 
     x_ = -1;
     y_ = -1;
+  }
+
+  bool checkPossibleChoice (int color) {
+    for (int x = 0; x < 8; ++x) {
+      for (int y = 0; y < 8; ++y) {
+        if (board_[x + 8 * y] != REVERSI_STONE_EMPTY) {
+          continue;
+        }
+        if (checkPutStone(color, x, y)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   bool checkPutStone (int color, int x, int y) {
@@ -340,24 +387,6 @@ private:
     }
     return flag;
   }
-
-//   void printBoard () {
-//     for (int y = 0; y < 8; ++y) {
-//       for (int x = 0; x < 8; ++x) {
-//         ReversiStone stone = board_[x + 8 * y];
-//         if (stone == ReversiStone::EMPTY) {
-//           std::cout << '.';
-//         }
-//         if (stone == ReversiStone::WHITE) {
-//           std::cout << 'W';
-//         }
-//         if (stone == ReversiStone::BLACK) {
-//           std::cout << 'B';
-//         }
-//       }
-//       std::cout << std::endl;
-//     }
-//   }
 
 };
 
