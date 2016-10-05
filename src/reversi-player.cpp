@@ -17,6 +17,13 @@
  *  even if you have no choice to put stone, the function is called, and you can check the opponent's activity.
  *  if you have no choice, x and y which you specified are ignored.
  *  then specifying invalid coordinate like (-1, -1) is safe.
+ *
+ *  board
+ *  -----
+ *  board array is Z order.
+ *   0: empty
+ *   1: BLACK
+ *  -1: WHITE
  */
 struct myai {
 
@@ -27,7 +34,7 @@ struct myai {
     random_engine.seed(random_device());
   }
 
-  void operator() (int color, int & x, int & y) {
+  void operator() (int color, std::array<apgame::ReversiStone, 64> & board, int & x, int & y) {
     x = std::uniform_int_distribution<int>(0, 7)(random_engine);
     y = std::uniform_int_distribution<int>(0, 7)(random_engine);
   }

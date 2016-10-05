@@ -142,7 +142,7 @@ private:
         std::printf("enemy put stone on (%d, %d)\n", x, y);
       }
       std::printf("your turn\n");
-      handler(color, x, y);
+      handler(color, board, x, y);
       std::printf("you put stone on (%d, %d)\n", x, y);
       int error;
       if (!reversi_client.callPutStone(x, y, error)) {
