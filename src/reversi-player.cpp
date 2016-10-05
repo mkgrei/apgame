@@ -28,15 +28,26 @@
 struct myai {
 
   std::mt19937 random_engine;
-
-  myai () {
+  apgame::ReversiPlayer & player;
+  myai (apgame::ReversiPlayer & player)
+  : player(player) {
     std::random_device random_device;
     random_engine.seed(random_device());
   }
 
   void operator() (int color, std::array<apgame::ReversiStone, 64> & board, int & x, int & y) {
-    x = std::uniform_int_distribution<int>(0, 7)(random_engine);
-    y = std::uniform_int_distribution<int>(0, 7)(random_engine);
+
+    if (!player.checkPossibleChoice(color)) {
+      x = -1;
+      return;
+    }
+    while (true) {
+      x = std::uniform_int_distribution<int>(0, 7)(random_engine);
+      y = std::uniform_int_distribution<int>(0, 7)(random_engine);
+      if (player.checkPutStone(color, x, y, false)) {
+        break;
+      }
+    }
   }
 
 };
@@ -72,6 +83,6 @@ int main (int argc, char ** argv) {
   auto room = vm["room"].as<std::string>();
 
   ReversiPlayer player(opt, std::move(room), std::move(user));
-  player.run(myai());
+  player.run(myai(player));
   return 0;
 }
