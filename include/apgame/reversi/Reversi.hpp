@@ -382,12 +382,12 @@ private:
     }
     if (flag) {
       if (flip) {
-        board_ = board;
-      }
-      if (color == REVERSI_STONE_BLACK) {
-        status_ = REVERSI_STATUS_WHITE_TURN;
-      } else if (color == REVERSI_STONE_WHITE) {
-        status_ = REVERSI_STATUS_BLACK_TURN;
+          board_ = board;
+        if (color == REVERSI_STONE_BLACK) {
+          status_ = REVERSI_STATUS_WHITE_TURN;
+        } else if (color == REVERSI_STONE_WHITE) {
+          status_ = REVERSI_STATUS_BLACK_TURN;
+        }
       }
     }
     return flag;
