@@ -228,7 +228,7 @@ struct Reversi : public Game {
     }
     last_passed_ = false;
 
-    if (!checkPutStone(ctx.color, x, y)) {
+    if (!checkPutStone(ctx.color, x, y, true)) {
       LOG_ERROR("invalid put");
       if (!ctx.socket_context.send(2)) {
         LOG_ERROR("failed to send error");
@@ -302,7 +302,7 @@ private:
         if (board_[x + 8 * y] != REVERSI_STONE_EMPTY) {
           continue;
         }
-        if (checkPutStone(color, x, y)) {
+        if (checkPutStone(color, x, y, false)) {
           return true;
         }
       }
@@ -310,7 +310,8 @@ private:
     return false;
   }
 
-  bool checkPutStone (int color, int x, int y) {
+  bool checkPutStone (int color, int x, int y, bool flip) {
+
     if (color != REVERSI_STONE_BLACK && color != REVERSI_STONE_WHITE) {
       return false;
     }
@@ -324,6 +325,8 @@ private:
     if (board_[x + 8 * y] != REVERSI_STONE_EMPTY) {
       return false;
     }
+
+    std::printf("%d, %d, %d\n", color, x, y);
 
     std::array<int, 16> K{
       1, 0,
@@ -378,7 +381,9 @@ private:
       }
     }
     if (flag) {
-      board_ = board;
+      if (flip) {
+        board_ = board;
+      }
       if (color == REVERSI_STONE_BLACK) {
         status_ = REVERSI_STATUS_WHITE_TURN;
       } else if (color == REVERSI_STONE_WHITE) {
