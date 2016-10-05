@@ -115,6 +115,7 @@ private:
 
       clearScreen();
       printBoard(board);
+      printf("YOU ARE %s", color == REVERSI_STONE_BLACK ? "BLACK": "WHITE");
       printf("%s", message.data());
 
       if (status == REVERSI_STATUS_AFTER_GAME) {
