@@ -1,5 +1,6 @@
 #include <apgame/socket/SocketClient.hpp>
-#include <apgame/game/GameClient.hpp>
+#include <apgame/game/UserClient.hpp>
+#include <apgame/game/RoomClient.hpp>
 #include <apgame/reversi/ReversiClient.hpp>
 
 
@@ -15,70 +16,54 @@ struct ReversiPlayer {
 
   ReversiPlayer (SocketClientOption const & opt, std::string room, std::string user)
   : client_(opt)
-  , room_(std::move(room))
-  , user_(std::move(user)) {
+  , user_(std::move(user))
+  , room_(std::move(room)) {
   }
 
   template <class Handler>
   void run (Handler && handler) {
     client_.run([&] (SocketContext & socket_context) {
-      procGame(socket_context);
-      procReversi(socket_context, handler);
+      proc(socket_context, handler);
     });
   }
 
 private:
   apgame::SocketClient client_;
-  std::string room_;
   std::string user_;
+  std::string room_;
   std::array<apgame::ReversiStone, 64> board_;
   int status_;
 
-  void procGame (SocketContext & socket_context) {
-    GameClient game_client(socket_context);
+  template <class Handler>
+  void proc (SocketContext & socket_context, Handler && handler) {
+    UserClient user_client(socket_context);
+    RoomClient room_client(socket_context);
     int error;
-    if (!game_client.callNegotiate(user_, error)) {
-      std::printf("failed to call negotiate\n"); 
-      std::exit(1);
-    }
+
+    user_client.joinUser(user_, error);
     if (error != 0) {
-      std::printf("failed to negotiate\n");
-      std::exit(1);
+      return;
     }
-
-    if (!game_client.callCreateRoom(room_, GameID::GAME_ID_REVERSI, error)) {
-      std::printf("failed to call createRoom\n");
-      std::exit(1);
-    }
-    if (error != 0 && error != 1) {
-      std::printf("failed to create room\n");
-      std::exit(1);
-    }
-
-    if (!game_client.callJoinRoom(GameID::GAME_ID_REVERSI, room_, error)) {
-      std::printf("failed to call joinRoom\n");
-      std::exit(1);
-    }
-
+    user_client.exit(error);
     if (error != 0) {
-      std::printf("failed to join room\n");
-      std::exit(1);
+      return;
     }
-  };
+
+    room_client.joinRoom(user_, error);
+    if (error != 0) {
+      return;
+    }
+    room_client.exit(error);
+    if (error != 0) {
+      return;
+    }
+
+    procReversi(socket_context, handler);
+  }
 
   template <class Handler>
   void procReversi (SocketContext & socket_context, Handler && handler) {
     ReversiClient reversi_client(socket_context);
-
-    int error;
-    if (!reversi_client.callJoin(error)) {
-      std::printf("failed to call join\n");
-      std::exit(1);
-    }
-    if (error != 0) {
-      std::printf("failed to join\n");
-      std::exit(1);
-    }
 
     while (true) {
       ReversiStatus status;

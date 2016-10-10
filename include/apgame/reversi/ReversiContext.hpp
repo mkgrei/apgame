@@ -10,13 +10,13 @@ namespace apgame {
 
 struct ReversiContext {
 
-  ReversiContext (SocketContext & socket_context, User const & user)
+  ReversiContext (SocketContext & socket_context, User * user)
   : socket_context(socket_context)
   , user(user) {
   }
 
   SocketContext & socket_context;
-  User user;
+  User * user;
   ReversiStone color;
 };
 

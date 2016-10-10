@@ -15,26 +15,6 @@ struct ReversiClient {
   }
 
 /**
- *  recieve:
- *  [int error]
- *
- *  error = 0: success
- *  error = 1: failed
- */
-  bool callJoin (int & error) {
-    LOG_DEBUG("callJoin");
-    if (!ctx_.recieve(error)) {
-      LOG_ERROR("failed to recieve error");
-      return false;
-    }
-    if (error != 0) {
-      LOG_ERROR("failed to join");
-      return false;
-    }
-    return true;
-  }
-
-/**
  * @details
  * recieve:
  * [ReversiStone color]

@@ -12,21 +12,20 @@ struct User {
   User () {
   }
 
-  User (User const & user)
-  : name_(user.name_) {
-  }
-
-  User (User && user)
-  : name_(std::move(user.name_)) {
-  }
-
-  std::string const & name () const noexcept {
+  std::string const & getName () const noexcept {
     return name_;
   }
 
-  User & name (std::string name) {
+  void setName (std::string name) {
     name_ = std::move(name);
-    return *this;
+  }
+
+  std::size_t getUID () const noexcept {
+    return uid_;
+  }
+
+  void setUID (std::size_t uid) {
+    uid_ = uid;
   }
 
   bool operator== (User const & other) const noexcept {
@@ -38,6 +37,7 @@ struct User {
   }
 
 private:
+  std::size_t uid_;
   std::string name_;
 };
 
@@ -49,7 +49,7 @@ template <>
 struct hash<apgame::User> {
 
   std::size_t operator() (apgame::User const & user) const noexcept {
-    return hash<std::string>()(user.name());
+    return hash<std::string>()(user.getName());
   }
 };
 

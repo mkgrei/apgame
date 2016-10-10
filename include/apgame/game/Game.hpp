@@ -2,7 +2,6 @@
 
 #include <apgame/game/enum.hpp>
 #include <apgame/game/User.hpp>
-#include <apgame/game/GameContext.hpp>
 
 #include <apgame/core/logging.hpp>
 #include <apgame/socket/SocketContext.hpp>
@@ -13,18 +12,21 @@
 
 namespace apgame {
 
+struct GameContext;
+
 struct Game {
 
-  Game (std::string room_name)
-  : room_name(std::move(room_name)) {
+  Game () {
   }
 
-  const std::string room_name;
-
-  virtual GameID gameID () const noexcept = 0;  
+  virtual GameID gameID () const noexcept = 0;
   virtual char const * gameName () const noexcept = 0;
-  virtual void run (GameContext & game_context) = 0;
+  virtual std::size_t getMaxUser () const noexcept = 0;
 
+  virtual bool join (User * user) = 0;
+  virtual bool initialize () = 0;
+
+  virtual void run (GameContext & game_context) = 0;
   virtual ~Game () noexcept = default;
 
 protected:
