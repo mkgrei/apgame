@@ -1,13 +1,13 @@
-#include <apgame/core/context.hpp>
-#include <apgame/core/server.hpp>
-#include <apgame/core/server_option.hpp>
-#include <apgame/game/game_manager.hpp>
+#include <apgame/game/EntryPoint.hpp>
+#include <apgame/socket/SocketContext.hpp>
+#include <apgame/socket/SocketServer.hpp>
 
 #include <boost/program_options.hpp>
 
 int main (int argc, char ** argv) {
 
   using namespace boost::program_options;
+  using namespace apgame;
 
   options_description opt_desc("apgame-server");
   opt_desc.add_options()
@@ -15,7 +15,7 @@ int main (int argc, char ** argv) {
     ("host", value<std::string>(), "local server host")
     ("port", value<int>()->default_value(12345), "local server port")
   ;
- 
+
   variables_map vm;
   store(parse_command_line(argc, argv, opt_desc), vm);
   notify(vm);
@@ -23,15 +23,15 @@ int main (int argc, char ** argv) {
   if (vm.count("help")) {
     std::cout << opt_desc << std::endl;
     return 1;
-  } 
+  }
 
-  apgame::server_option server_option;
-  server_option 
-    .local_address(vm["host"].as<std::string>())
-    .local_port(vm["port"].as<int>())
-    .max_connection(2)
+  SocketServerOption opt;
+  opt
+    .localAddress(vm["host"].as<std::string>())
+    .localPort(vm["port"].as<int>())
+    .maxConnection(2)
   ;
 
-  apgame::server server(server_option);
-  server.run(apgame::game_manager());
+  SocketServer server(opt);
+  server.run(EntryPoint());
 }

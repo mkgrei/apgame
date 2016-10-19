@@ -6,6 +6,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
+#include <vector>
+
 
 namespace apgame {
 
@@ -48,6 +51,12 @@ void log (std::uint64_t const & v) {
 
 void log (std::string const & v) {
   std::cerr << v;
+}
+
+void log (std::vector<char> const & v) {
+  for (char c : v) {
+    std::cerr << c;
+  }
 }
 
 void log (char const * v) {

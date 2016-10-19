@@ -11,7 +11,8 @@ include_directories(include)
 
 add_subdirectory(lh-ai)
 add_subdirectory(src)
-add_subdirectory(docker)
+add_subdirectory(example)
+# add_subdirectory(docker)
 
 # used in unittest and profile.
 # include(cmake/gtest.cmake)
